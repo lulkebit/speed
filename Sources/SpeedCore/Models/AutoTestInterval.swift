@@ -20,54 +20,15 @@ public enum AutoTestInterval: Int, CaseIterable, Identifiable, Sendable {
         return TimeInterval(rawValue)
     }
 
-    public var title: String {
-        switch self {
-        case .off:
-            "Aus"
-        case .fiveMinutes:
-            "Alle 5 Minuten"
-        case .fifteenMinutes:
-            "Alle 15 Minuten"
-        case .thirtyMinutes:
-            "Alle 30 Minuten"
-        case .oneHour:
-            "Stündlich"
-        case .twoHours:
-            "Alle 2 Stunden"
-        }
+    public func title(using strings: SpeedStrings) -> String {
+        strings.autoTestIntervalTitle(self)
     }
 
-    public var shortTitle: String {
-        switch self {
-        case .off:
-            "Aus"
-        case .fiveMinutes:
-            "5 Min"
-        case .fifteenMinutes:
-            "15 Min"
-        case .thirtyMinutes:
-            "30 Min"
-        case .oneHour:
-            "1 Std"
-        case .twoHours:
-            "2 Std"
-        }
+    public func shortTitle(using strings: SpeedStrings) -> String {
+        strings.autoTestIntervalShortTitle(self)
     }
 
-    public var detail: String {
-        switch self {
-        case .off:
-            "Es werden nur manuell gestartete Tests ausgeführt."
-        case .fiveMinutes:
-            "Ideal für kurze Checks während aktiver Netzwerkprobleme."
-        case .fifteenMinutes:
-            "Ein guter Mittelweg für regelmäßige Messungen."
-        case .thirtyMinutes:
-            "Sinnvoll für gelegentliche Hintergrundmessungen."
-        case .oneHour:
-            "Zurückhaltend und angenehm für langfristiges Monitoring."
-        case .twoHours:
-            "Sehr sparsam, wenn nur grobe Veränderungen wichtig sind."
-        }
+    public func detail(using strings: SpeedStrings) -> String {
+        strings.autoTestIntervalDetail(self)
     }
 }

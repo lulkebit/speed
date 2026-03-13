@@ -5,6 +5,7 @@ import Observation
 @Observable
 public final class SpeedAppController {
     public let speedTestViewModel: SpeedTestViewModel
+    public let localization: SpeedLocalization
 
     public var automaticTestInterval: AutoTestInterval {
         didSet {
@@ -17,9 +18,19 @@ public final class SpeedAppController {
         }
     }
 
+    public var appLanguage: AppLanguage {
+        get {
+            localization.appLanguage
+        }
+        set {
+            localization.appLanguage = newValue
+        }
+    }
+
     public private(set) var nextAutomaticTestAt: Date?
     public private(set) var launchAtLoginState: LaunchAtLoginState
-    public private(set) var launchAtLoginMessage: String?
+
+    private var launchAtLoginFeedback: LaunchAtLoginFeedback?
 
     @ObservationIgnored
     private let settingsStore: SpeedSettingsStore
@@ -31,16 +42,19 @@ public final class SpeedAppController {
     private var automaticTestingTask: Task<Void, Never>?
 
     public init(
-        speedTestViewModel: SpeedTestViewModel = SpeedTestViewModel(),
+        speedTestViewModel: SpeedTestViewModel? = nil,
         settingsStore: SpeedSettingsStore = SpeedSettingsStore(),
-        launchAtLoginManager: LaunchAtLoginManager = LaunchAtLoginManager()
+        launchAtLoginManager: LaunchAtLoginManager = LaunchAtLoginManager(),
+        localization: SpeedLocalization? = nil
     ) {
-        self.speedTestViewModel = speedTestViewModel
+        let localization = localization ?? SpeedLocalization(settingsStore: settingsStore)
+
+        self.localization = localization
+        self.speedTestViewModel = speedTestViewModel ?? SpeedTestViewModel(localization: localization)
         self.settingsStore = settingsStore
         self.launchAtLoginManager = launchAtLoginManager
         self.automaticTestInterval = settingsStore.automaticTestInterval
         self.launchAtLoginState = launchAtLoginManager.currentState()
-        self.launchAtLoginMessage = nil
 
         rescheduleAutomaticTests()
     }
@@ -50,16 +64,21 @@ public final class SpeedAppController {
     }
 
     public var nextAutomaticTestDescription: String {
+        let strings = localization.strings
+
         guard let nextAutomaticTestAt else {
-            return "Automatische Messungen sind aktuell ausgeschaltet."
+            return strings.automaticTestsDisabledDescription
         }
 
-        let relative = MetricFormatter.relativeTimestamp(nextAutomaticTestAt) ?? "später"
-        return "Nächste automatische Messung \(relative)."
+        let relative = MetricFormatter.relativeTimestamp(
+            nextAutomaticTestAt,
+            locale: localization.locale
+        ) ?? strings.laterHint
+        return strings.nextAutomaticTestDescription(relative: relative)
     }
 
     public var automaticTestingFootnote: String {
-        automaticTestInterval.detail
+        automaticTestInterval.detail(using: localization.strings)
     }
 
     public var canConfigureLaunchAtLogin: Bool {
@@ -67,30 +86,47 @@ public final class SpeedAppController {
     }
 
     public var launchAtLoginDescription: String? {
+        let strings = localization.strings
+
         switch launchAtLoginState {
         case .enabled:
-            return "Speed startet automatisch nach der Anmeldung und bleibt in der Menüleiste verfügbar."
+            return strings.launchAtLoginEnabledDescription
         case .disabled:
-            return "Die App startet derzeit nur manuell."
+            return strings.launchAtLoginDisabledDescription
         case .requiresApproval:
-            return "macOS wartet noch auf deine Bestätigung in den Systemeinstellungen unter Allgemein > Anmeldeobjekte."
+            return strings.launchAtLoginRequiresApprovalDescription
         case .unsupported:
             return nil
         }
     }
 
+    public var launchAtLoginMessage: String? {
+        guard let launchAtLoginFeedback else {
+            return nil
+        }
+
+        let strings = localization.strings
+
+        switch launchAtLoginFeedback {
+        case let .localized(error):
+            return strings.launchAtLoginErrorDescription(error)
+        case let .raw(message):
+            return message
+        }
+    }
+
     public func setLaunchAtLoginEnabled(_ enabled: Bool) {
-        launchAtLoginMessage = nil
+        launchAtLoginFeedback = nil
 
         do {
             try launchAtLoginManager.setEnabled(enabled)
             refreshLaunchAtLoginState()
         } catch let error as LaunchAtLoginError {
             refreshLaunchAtLoginState()
-            launchAtLoginMessage = error.errorDescription
+            launchAtLoginFeedback = .localized(error)
         } catch {
             refreshLaunchAtLoginState()
-            launchAtLoginMessage = error.localizedDescription
+            launchAtLoginFeedback = .raw(error.localizedDescription)
         }
     }
 
@@ -130,4 +166,9 @@ public final class SpeedAppController {
             }
         }
     }
+}
+
+private enum LaunchAtLoginFeedback: Equatable {
+    case localized(LaunchAtLoginError)
+    case raw(String)
 }

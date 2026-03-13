@@ -1,29 +1,12 @@
 import Foundation
 
-public enum NetworkQualityError: LocalizedError, Equatable {
+public enum NetworkQualityError: Error, Equatable, Sendable {
     case alreadyRunning
     case commandUnavailable
     case noOutput
     case invalidOutput
     case cancelled
-    case executionFailed(String)
-
-    public var errorDescription: String? {
-        switch self {
-        case .alreadyRunning:
-            "Es läuft bereits ein Speedtest."
-        case .commandUnavailable:
-            "Der integrierte macOS-Speedtest ist auf diesem System nicht verfügbar."
-        case .noOutput:
-            "Der Speedtest hat keine auswertbaren Daten geliefert."
-        case .invalidOutput:
-            "Die Ausgabe des Speedtests konnte nicht gelesen werden."
-        case .cancelled:
-            "Der Speedtest wurde abgebrochen."
-        case let .executionFailed(message):
-            message.isEmpty ? "Der Speedtest konnte nicht abgeschlossen werden." : message
-        }
-    }
+    case executionFailed(message: String?, status: Int32?)
 }
 
 private struct NetworkQualityCLIOutput: Decodable {

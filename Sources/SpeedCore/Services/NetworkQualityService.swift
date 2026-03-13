@@ -43,9 +43,8 @@ public final class NetworkQualityService {
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                         result = .failure(
                             NetworkQualityError.executionFailed(
-                                message?.isEmpty == false
-                                    ? message!
-                                    : "Der Speedtest wurde mit Status \(process.terminationStatus) beendet."
+                                message: message?.isEmpty == false ? message : nil,
+                                status: process.terminationStatus
                             )
                         )
                     }

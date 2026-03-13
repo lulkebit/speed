@@ -3,6 +3,7 @@ import Foundation
 public final class SpeedSettingsStore {
     private enum Key {
         static let automaticTestInterval = "automaticTestInterval"
+        static let appLanguage = "appLanguage"
     }
 
     private let userDefaults: UserDefaults
@@ -18,6 +19,19 @@ public final class SpeedSettingsStore {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: Key.automaticTestInterval)
+        }
+    }
+
+    public var appLanguage: AppLanguage {
+        get {
+            guard let rawValue = userDefaults.string(forKey: Key.appLanguage) else {
+                return .system
+            }
+
+            return AppLanguage(rawValue: rawValue) ?? .system
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Key.appLanguage)
         }
     }
 }

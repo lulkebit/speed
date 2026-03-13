@@ -57,42 +57,15 @@ public enum NetworkProfile: String, Equatable, Sendable {
     case stable
     case weak
 
-    public var title: String {
-        switch self {
-        case .excellent:
-            "Sehr flink"
-        case .strong:
-            "Stark"
-        case .stable:
-            "Solide"
-        case .weak:
-            "Träge"
-        }
+    public func title(using strings: SpeedStrings) -> String {
+        strings.networkProfileTitle(self)
     }
 
-    public var headline: String {
-        switch self {
-        case .excellent:
-            "Reagiert fast ohne Verzögerung"
-        case .strong:
-            "Schnell genug für Streaming und Calls"
-        case .stable:
-            "Im Alltag stabil, aber nicht superspritzig"
-        case .weak:
-            "Bei interaktiven Aufgaben spürbar langsam"
-        }
+    public func headline(using strings: SpeedStrings) -> String {
+        strings.networkProfileHeadline(self)
     }
 
-    public var detail: String {
-        switch self {
-        case .excellent:
-            "Sehr gut für Video-Calls, Cloud-Work und mehrere aktive Geräte."
-        case .strong:
-            "Fühlt sich flott an und sollte auch unter Last zuverlässig bleiben."
-        case .stable:
-            "Passt für Alltag, Surfen und Streaming. Unter Last kann es zäher werden."
-        case .weak:
-            "Downloads laufen oft noch okay, aber Reaktionszeit und Parallelbetrieb leiden."
-        }
+    public func detail(using strings: SpeedStrings) -> String {
+        strings.networkProfileDetail(self)
     }
 }

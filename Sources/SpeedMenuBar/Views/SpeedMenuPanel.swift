@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SpeedMenuPanel: View {
     @Bindable var viewModel: SpeedTestViewModel
+    let localization: SpeedLocalization
     let onOpenSettings: () -> Void
 
     var body: some View {
@@ -20,12 +21,13 @@ struct SpeedMenuPanel: View {
             .padding(18)
         }
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .environment(\.locale, localization.locale)
     }
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Speed")
+                Text(localization.strings.appName)
                     .font(.system(size: 23, weight: .semibold))
                     .foregroundStyle(.primary)
 
@@ -62,7 +64,7 @@ struct SpeedMenuPanel: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .help("Einstellungen")
+                .help(localization.strings.settingsHelp)
             }
         }
     }
@@ -71,7 +73,11 @@ struct SpeedMenuPanel: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.lastResult != nil ? "Download" : "Status")
+                    Text(
+                        viewModel.lastResult != nil
+                            ? localization.strings.summaryDownloadLabel
+                            : localization.strings.summaryStatusLabel
+                    )
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
 
@@ -86,7 +92,11 @@ struct SpeedMenuPanel: View {
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Text(viewModel.isRunning ? "Test läuft" : "Bereit")
+                        Text(
+                            viewModel.isRunning
+                                ? localization.strings.summaryRunningTitle
+                                : localization.strings.summaryReadyTitle
+                        )
                             .font(.system(size: 30, weight: .semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
@@ -114,7 +124,7 @@ struct SpeedMenuPanel: View {
 
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Upload")
+                    Text(localization.strings.uploadLabel)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
 
@@ -132,7 +142,7 @@ struct SpeedMenuPanel: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("Profil")
+                    Text(localization.strings.profileLabel)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
 
@@ -150,7 +160,7 @@ struct SpeedMenuPanel: View {
         HStack(spacing: 8) {
             Image(systemName: viewModel.isRunning ? "waveform.path.ecg" : "gauge.with.needle")
 
-            Text(viewModel.isRunning ? "Live" : viewModel.heroTitle)
+            Text(viewModel.isRunning ? localization.strings.summaryBadgeLive : viewModel.heroTitle)
                 .lineLimit(1)
 
             if viewModel.isRunning {
@@ -166,27 +176,27 @@ struct SpeedMenuPanel: View {
     private var metricsSurface: some View {
         VStack(spacing: 0) {
             MetricRowView(
-                title: "Ping",
+                title: localization.strings.metricPingTitle,
                 value: viewModel.idleLatencyValue,
                 unit: "ms",
                 icon: "timer",
-                note: "Leerlauf"
+                note: localization.strings.metricPingNote
             )
 
             GlassDivider()
 
             MetricRowView(
-                title: "Reaktion",
+                title: localization.strings.metricResponsivenessTitle,
                 value: viewModel.responsivenessValue,
                 unit: "ms",
                 icon: "bolt.badge.clock",
-                note: "Apps und Calls"
+                note: localization.strings.metricResponsivenessNote
             )
 
             GlassDivider()
 
             MetricRowView(
-                title: "Netzwerk",
+                title: localization.strings.metricNetworkTitle,
                 value: viewModel.interfaceLabel,
                 unit: "",
                 icon: "wifi",
@@ -237,7 +247,7 @@ struct SpeedMenuPanel: View {
 
                 Spacer()
 
-                Button("Beenden") {
+                Button(localization.strings.quitButtonTitle) {
                     NSApplication.shared.terminate(nil)
                 }
                 .buttonStyle(.plain)

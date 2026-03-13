@@ -1,3 +1,4 @@
+import AppKit
 import SpeedCore
 import SwiftUI
 
@@ -5,13 +6,15 @@ struct SettingsWindowView: View {
     @Bindable var appController: SpeedAppController
 
     var body: some View {
+        let strings = appController.localization.strings
+
         VStack(alignment: .leading, spacing: 20) {
             header
 
             Form {
-                Section("Autostart") {
+                Section {
                     Toggle(
-                        "Speed bei der Anmeldung starten",
+                        strings.launchAtLoginToggleTitle,
                         isOn: Binding(
                             get: { appController.launchAtLoginState.isEnabledForToggle },
                             set: { appController.setLaunchAtLoginEnabled($0) }
@@ -30,15 +33,17 @@ struct SettingsWindowView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(.red)
                     }
+                } header: {
+                    Text(strings.settingsSectionLaunchAtLogin)
                 }
 
-                Section("Automatische Messungen") {
+                Section {
                     Picker(
-                        "Intervall",
+                        strings.automaticTestIntervalLabel,
                         selection: $appController.automaticTestInterval
                     ) {
                         ForEach(AutoTestInterval.allCases) { interval in
-                            Text(interval.title)
+                            Text(interval.title(using: strings))
                                 .tag(interval)
                         }
                     }
@@ -51,6 +56,28 @@ struct SettingsWindowView: View {
                     Text(appController.automaticTestingFootnote)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
+                } header: {
+                    Text(strings.settingsSectionAutomaticTests)
+                }
+
+                Section {
+                    Picker(
+                        strings.languagePickerLabel,
+                        selection: $appController.appLanguage
+                    ) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(
+                                strings.appLanguageOptionTitle(
+                                    language,
+                                    resolvedSystemLanguage: appController.localization.resolvedLanguage
+                                )
+                            )
+                            .tag(language)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text(strings.settingsSectionLanguage)
                 }
             }
             .formStyle(.grouped)
@@ -59,10 +86,30 @@ struct SettingsWindowView: View {
         }
         .padding(24)
         .frame(minWidth: 460, minHeight: 280)
+        .background(WindowTitleUpdater(title: strings.settingsTitle))
+        .environment(\.locale, appController.localization.locale)
     }
 
     private var header: some View {
-        Text("Einstellungen")
+        Text(appController.localization.strings.settingsTitle)
             .font(.system(size: 24, weight: .semibold))
+    }
+}
+
+private struct WindowTitleUpdater: NSViewRepresentable {
+    let title: String
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            view.window?.title = title
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            nsView.window?.title = title
+        }
     }
 }

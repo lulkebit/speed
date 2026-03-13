@@ -15,15 +15,18 @@ struct SpeedMenuBarApp: App {
         MenuBarExtra {
             SpeedMenuPanel(
                 viewModel: appController.speedTestViewModel,
+                localization: appController.localization,
                 onOpenSettings: {
                     SettingsWindowController.shared.show(appController: appController)
                 }
             )
-                .frame(width: 356)
+            .frame(width: 356)
+            .environment(\.locale, appController.localization.locale)
         } label: {
             MenuBarStatusIcon(
                 symbolName: appController.speedTestViewModel.menuBarSymbol,
-                isRunning: appController.speedTestViewModel.isRunning
+                isRunning: appController.speedTestViewModel.isRunning,
+                localization: appController.localization
             )
         }
         .menuBarExtraStyle(.window)
@@ -33,12 +36,13 @@ struct SpeedMenuBarApp: App {
 private struct MenuBarStatusIcon: View {
     let symbolName: String
     let isRunning: Bool
+    let localization: SpeedLocalization
 
     var body: some View {
         Image(systemName: symbolName)
             .symbolVariant(.fill)
             .font(.system(size: 14, weight: .semibold))
             .contentTransition(.symbolEffect(.replace))
-            .help(isRunning ? "Speedtest läuft" : "Speed öffnen")
+            .help(isRunning ? localization.strings.menuBarRunningHelp : localization.strings.menuBarOpenHelp)
     }
 }

@@ -4,10 +4,12 @@ import Observation
 @MainActor
 @Observable
 public final class SpeedTestViewModel {
+    public let localization: SpeedLocalization
     public private(set) var lastResult: SpeedTestResult?
     public private(set) var isRunning = false
     public private(set) var elapsedSeconds = 0
-    public private(set) var errorMessage: String?
+
+    private var userFacingError: UserFacingError?
 
     @ObservationIgnored
     private let service: NetworkQualityService
@@ -21,8 +23,27 @@ public final class SpeedTestViewModel {
     @ObservationIgnored
     private var startedAt: Date?
 
-    public init(service: NetworkQualityService = NetworkQualityService()) {
+    public init(
+        service: NetworkQualityService = NetworkQualityService(),
+        localization: SpeedLocalization = SpeedLocalization()
+    ) {
         self.service = service
+        self.localization = localization
+    }
+
+    public var errorMessage: String? {
+        guard let userFacingError else {
+            return nil
+        }
+
+        let strings = localization.strings
+
+        switch userFacingError {
+        case let .networkQuality(error):
+            return strings.networkQualityErrorDescription(error)
+        case let .raw(message):
+            return message
+        }
     }
 
     public var menuBarSymbol: String {
@@ -49,8 +70,10 @@ public final class SpeedTestViewModel {
     }
 
     public var statusLine: String {
+        let strings = localization.strings
+
         if isRunning {
-            return "Download, Upload und Reaktionszeit werden gerade gemessen."
+            return strings.statusRunning
         }
 
         if let errorMessage {
@@ -58,14 +81,18 @@ public final class SpeedTestViewModel {
         }
 
         if let lastResult {
-            return "\(lastResult.profile.title) • zuletzt \(lastMeasuredRelative ?? "gerade eben")"
+            return strings.statusLastMeasured(
+                profileTitle: lastResult.profile.title(using: strings),
+                relative: lastMeasuredRelative ?? strings.justNowHint
+            )
         }
 
-        return "Ein Klick startet den nativen macOS-Speedtest direkt aus der Menüleiste."
+        return strings.statusEmpty
     }
 
     public var actionTitle: String {
-        isRunning ? "Abbrechen" : (lastResult == nil ? "Speedtest starten" : "Erneut messen")
+        let strings = localization.strings
+        return isRunning ? strings.actionCancel : (lastResult == nil ? strings.actionStart : strings.actionRetest)
     }
 
     public var actionSymbol: String {
@@ -73,35 +100,39 @@ public final class SpeedTestViewModel {
     }
 
     public var heroTitle: String {
+        let strings = localization.strings
+
         if isRunning {
-            return "Messung läuft"
+            return strings.heroRunning
         }
 
         if let lastResult {
-            return lastResult.profile.headline
+            return lastResult.profile.headline(using: strings)
         }
 
         if errorMessage != nil {
-            return "Noch ein Versuch?"
+            return strings.heroRetry
         }
 
-        return "Bereit für einen schnellen Check"
+        return strings.heroReady
     }
 
     public var heroDescription: String {
+        let strings = localization.strings
+
         if isRunning {
-            return "Das dauert meist 20 bis 30 Sekunden. Du kannst das Menü dabei geöffnet lassen."
+            return strings.heroRunningDescription
         }
 
         if let lastResult {
-            return lastResult.profile.detail
+            return lastResult.profile.detail(using: strings)
         }
 
         if let errorMessage {
             return errorMessage
         }
 
-        return "Die App nutzt macOS `networkQuality`, um Download, Upload und Reaktionszeit kompakt anzuzeigen."
+        return strings.heroEmptyDescription
     }
 
     public var estimatedProgress: Double? {
@@ -113,59 +144,63 @@ public final class SpeedTestViewModel {
     }
 
     public var downloadValue: String {
-        MetricFormatter.speed(lastResult?.downloadMbps)
+        MetricFormatter.speed(lastResult?.downloadMbps, locale: localization.locale)
     }
 
     public var uploadValue: String {
-        MetricFormatter.speed(lastResult?.uploadMbps)
+        MetricFormatter.speed(lastResult?.uploadMbps, locale: localization.locale)
     }
 
     public var idleLatencyValue: String {
-        MetricFormatter.milliseconds(lastResult?.idleLatencyMs)
+        MetricFormatter.milliseconds(lastResult?.idleLatencyMs, locale: localization.locale)
     }
 
     public var responsivenessValue: String {
-        MetricFormatter.milliseconds(lastResult?.worstResponsivenessMs)
+        MetricFormatter.milliseconds(lastResult?.worstResponsivenessMs, locale: localization.locale)
     }
 
     public var qualityValue: String {
-        lastResult?.profile.title ?? "Bereit"
+        let strings = localization.strings
+        return lastResult?.profile.title(using: strings) ?? strings.qualityReady
     }
 
     public var qualityNote: String {
-        lastResult?.profile.detail ?? "Noch keine Messung vorhanden."
+        let strings = localization.strings
+        return lastResult?.profile.detail(using: strings) ?? strings.qualityNoMeasurement
     }
 
     public var interfaceLabel: String {
         guard let interfaceName = lastResult?.interfaceName else {
-            return "Aktives Netzwerk"
+            return localization.strings.interfaceDefaultLabel
         }
 
-        return interfaceName.uppercased()
+        return interfaceName.uppercased(with: localization.locale)
     }
 
     public var serverLabel: String {
         guard let serverName = lastResult?.serverName else {
-            return "Apple networkQuality"
+            return localization.strings.serverDefaultLabel
         }
 
         return serverName.replacingOccurrences(of: ".aaplimg.com", with: "")
     }
 
     public var footerCaption: String {
+        let strings = localization.strings
+
         if isRunning {
-            return "Messdauer bisher: \(elapsedSeconds)s"
+            return strings.footerDuration(seconds: elapsedSeconds)
         }
 
         if let lastMeasuredRelative {
-            return "Zuletzt gemessen \(lastMeasuredRelative)"
+            return strings.footerLastMeasured(relative: lastMeasuredRelative)
         }
 
-        return "Misst mit dem nativen Apple-Netzwerktest"
+        return strings.footerDefault
     }
 
     public var lastMeasuredClock: String? {
-        MetricFormatter.clockTimestamp(lastResult?.measuredAt)
+        MetricFormatter.clockTimestamp(lastResult?.measuredAt, locale: localization.locale)
     }
 
     public func handlePrimaryAction() {
@@ -187,7 +222,7 @@ public final class SpeedTestViewModel {
             return
         }
 
-        errorMessage = nil
+        userFacingError = nil
         isRunning = true
         elapsedSeconds = 0
         startedAt = Date()
@@ -206,14 +241,14 @@ public final class SpeedTestViewModel {
                 }
 
                 self.lastResult = result
-                self.errorMessage = nil
+                self.userFacingError = nil
             } catch let error as NetworkQualityError {
                 if error != .cancelled {
-                    self.errorMessage = error.errorDescription
+                    self.userFacingError = .networkQuality(error)
                 }
             } catch {
                 if !Task.isCancelled {
-                    self.errorMessage = error.localizedDescription
+                    self.userFacingError = .raw(error.localizedDescription)
                 }
             }
 
@@ -222,7 +257,7 @@ public final class SpeedTestViewModel {
     }
 
     private var lastMeasuredRelative: String? {
-        MetricFormatter.relativeTimestamp(lastResult?.measuredAt)
+        MetricFormatter.relativeTimestamp(lastResult?.measuredAt, locale: localization.locale)
     }
 
     private func beginTimer() {
@@ -254,4 +289,9 @@ public final class SpeedTestViewModel {
         timerTask?.cancel()
         timerTask = nil
     }
+}
+
+private enum UserFacingError: Equatable {
+    case networkQuality(NetworkQualityError)
+    case raw(String)
 }

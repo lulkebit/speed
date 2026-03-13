@@ -17,20 +17,9 @@ public enum LaunchAtLoginState: Equatable, Sendable {
     }
 }
 
-public enum LaunchAtLoginError: LocalizedError, Equatable {
+public enum LaunchAtLoginError: Error, Equatable, Sendable {
     case requiresBundledApp
-    case registrationFailed(String)
-
-    public var errorDescription: String? {
-        switch self {
-        case .requiresBundledApp:
-            "Autostart funktioniert in dieser Entwicklungsansicht noch nicht. Bitte nutze die gebaute .app."
-        case let .registrationFailed(message):
-            message.isEmpty
-                ? "Autostart konnte nicht aktualisiert werden."
-                : message
-        }
-    }
+    case registrationFailed(String?)
 }
 
 @MainActor

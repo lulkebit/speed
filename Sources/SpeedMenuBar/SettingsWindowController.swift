@@ -17,12 +17,13 @@ final class SettingsWindowController {
 
         if let window {
             window.contentViewController = hostingController
+            window.title = appController.localization.strings.settingsTitle
             bringToFront(window)
             return
         }
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "Einstellungen"
+        window.title = appController.localization.strings.settingsTitle
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .visible
