@@ -8,48 +8,29 @@ struct SpeedMenuPanel: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    SpeedPalette.sand,
-                    Color(red: 0.98, green: 0.84, blue: 0.76),
-                    SpeedPalette.mint
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .overlay(alignment: .topTrailing) {
-                Circle()
-                    .fill(SpeedPalette.coral.opacity(0.18))
-                    .frame(width: 170, height: 170)
-                    .offset(x: 54, y: -74)
-            }
-            .overlay(alignment: .bottomLeading) {
-                Circle()
-                    .fill(SpeedPalette.accentSoft.opacity(0.82))
-                    .frame(width: 220, height: 220)
-                    .offset(x: -88, y: 104)
-            }
+            FrostedBackground()
 
             VStack(alignment: .leading, spacing: 16) {
                 header
-                heroCard
-                metricGrid
+                summarySurface
+                metricsSurface
                 footer
             }
             .padding(18)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     }
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Speed")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(SpeedPalette.primaryText)
+                    .font(.system(size: 23, weight: .semibold))
+                    .foregroundStyle(.primary)
 
                 Text(viewModel.statusLine)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(SpeedPalette.secondaryText)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -57,116 +38,140 @@ struct SpeedMenuPanel: View {
 
             if let lastMeasuredClock = viewModel.lastMeasuredClock {
                 Text(lastMeasuredClock)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(SpeedPalette.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.74))
-                    )
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .glassPill()
             }
         }
     }
 
-    private var heroCard: some View {
+    private var summarySurface: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label(viewModel.heroTitle, systemImage: viewModel.isRunning ? "waveform.path.ecg" : "gauge.with.needle")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(SpeedPalette.secondaryText)
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.lastResult != nil ? "Download" : "Status")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
 
-                Spacer()
+                    if viewModel.lastResult != nil {
+                        HStack(alignment: .lastTextBaseline, spacing: 6) {
+                            Text(viewModel.downloadValue)
+                                .font(.system(size: 44, weight: .semibold))
+                                .foregroundStyle(.primary)
 
-                if viewModel.isRunning {
-                    Text("\(viewModel.elapsedSeconds)s")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(SpeedPalette.accent)
-                }
-            }
-
-            if viewModel.lastResult != nil {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .lastTextBaseline, spacing: 6) {
-                        Text(viewModel.downloadValue)
-                            .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundStyle(SpeedPalette.primaryText)
-
-                        Text("Mbps")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(SpeedPalette.secondaryText)
+                            Text("Mbps")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text(viewModel.isRunning ? "Test läuft" : "Bereit")
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
-
-                    Text("Download")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(SpeedPalette.secondaryText)
                 }
-            } else {
-                Text(viewModel.isRunning ? "Wir sammeln gerade Messwerte." : "Noch keine Messung")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .foregroundStyle(SpeedPalette.primaryText)
-            }
 
-            Text(viewModel.heroDescription)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(SpeedPalette.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 12)
+
+                summaryBadge
+            }
 
             if let progress = viewModel.estimatedProgress {
                 ProgressView(value: progress)
-                    .tint(SpeedPalette.accent)
+                    .tint(.primary.opacity(0.7))
+                    .controlSize(.small)
+            }
+
+            Text(viewModel.heroDescription)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            GlassDivider()
+
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Upload")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                        Text(viewModel.uploadValue)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.primary)
+
+                        Text("Mbps")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Profil")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Text(viewModel.qualityValue)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color.white.opacity(0.8))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.white.opacity(0.95), lineWidth: 1)
-        )
+        .glassSection()
     }
 
-    private var metricGrid: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                MetricCardView(
-                    title: "Upload",
-                    value: viewModel.uploadValue,
-                    unit: "Mbps",
-                    icon: "arrow.up.right.circle",
-                    note: "Senden"
-                )
+    private var summaryBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: viewModel.isRunning ? "waveform.path.ecg" : "gauge.with.needle")
 
-                MetricCardView(
-                    title: "Ping",
-                    value: viewModel.idleLatencyValue,
-                    unit: "ms",
-                    icon: "timer",
-                    note: "Leerlauf"
-                )
-            }
+            Text(viewModel.isRunning ? "Live" : viewModel.heroTitle)
+                .lineLimit(1)
 
-            HStack(spacing: 10) {
-                MetricCardView(
-                    title: "Reaktion",
-                    value: viewModel.responsivenessValue,
-                    unit: "ms",
-                    icon: "bolt.badge.clock",
-                    note: "Apps & Calls"
-                )
-
-                MetricCardView(
-                    title: "Profil",
-                    value: viewModel.qualityValue,
-                    unit: "",
-                    icon: "sparkles",
-                    note: viewModel.qualityNote
-                )
+            if viewModel.isRunning {
+                Text("\(viewModel.elapsedSeconds)s")
+                    .foregroundStyle(.secondary)
             }
         }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(.secondary)
+        .glassPill()
+    }
+
+    private var metricsSurface: some View {
+        VStack(spacing: 0) {
+            MetricRowView(
+                title: "Ping",
+                value: viewModel.idleLatencyValue,
+                unit: "ms",
+                icon: "timer",
+                note: "Leerlauf"
+            )
+
+            GlassDivider()
+
+            MetricRowView(
+                title: "Reaktion",
+                value: viewModel.responsivenessValue,
+                unit: "ms",
+                icon: "bolt.badge.clock",
+                note: "Apps und Calls"
+            )
+
+            GlassDivider()
+
+            MetricRowView(
+                title: "Netzwerk",
+                value: viewModel.interfaceLabel,
+                unit: "",
+                icon: "wifi",
+                note: viewModel.serverLabel
+            )
+        }
+        .glassSection()
     }
 
     private var footer: some View {
@@ -174,32 +179,27 @@ struct SpeedMenuPanel: View {
             Button(action: viewModel.handlePrimaryAction) {
                 HStack(spacing: 10) {
                     Image(systemName: viewModel.actionSymbol)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 14, weight: .semibold))
 
                     Text(viewModel.actionTitle)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .semibold))
 
                     Spacer()
 
                     Text(viewModel.footerCaption)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .opacity(0.82)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.white)
+                .foregroundStyle(.primary)
                 .padding(.horizontal, 15)
                 .padding(.vertical, 14)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    SpeedPalette.accent,
-                                    Color(red: 0.10, green: 0.53, blue: 0.56)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                    Capsule(style: .continuous)
+                        .fill(.thinMaterial)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.8)
                 )
             }
             .buttonStyle(.plain)
@@ -219,10 +219,10 @@ struct SpeedMenuPanel: View {
                     NSApplication.shared.terminate(nil)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(SpeedPalette.accent)
+                .foregroundStyle(.secondary)
             }
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundStyle(SpeedPalette.secondaryText)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(.secondary)
         }
     }
 }

@@ -14,7 +14,7 @@ struct SpeedMenuBarApp: App {
     var body: some Scene {
         MenuBarExtra {
             SpeedMenuPanel(viewModel: viewModel)
-                .frame(width: 372)
+                .frame(width: 356)
         } label: {
             MenuBarStatusIcon(
                 symbolName: viewModel.menuBarSymbol,
