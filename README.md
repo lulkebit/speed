@@ -8,6 +8,7 @@ Native macOS-Menubar-App mit integriertem Internet-Speedtest im Dropdown.
 - öffnet ein kompaktes, übersichtliches Dropdown mit Download, Upload, Ping und Reaktionszeit
 - nutzt den nativen macOS-Speedtest `networkQuality`
 - erlaubt erneutes Starten und Abbrechen einer laufenden Messung
+- bietet ein Einstellungsfenster für Autostart und automatische Testintervalle
 - lässt sich als `.app`-Bundle bauen
 
 ## Voraussetzungen
@@ -29,9 +30,11 @@ swift run SpeedMenuBar
 open dist/SpeedMenuBar.app
 ```
 
+Im Popout erreichst du das Einstellungsfenster über das kleine Zahnrad oben rechts. Dort lassen sich Autostart und automatische Messungen konfigurieren. Der Autostart greift im gebauten `.app`-Bundle.
+
 ## Struktur
 
 - `Sources/SpeedCore`: Parsing, Service und ViewModel
 - `Sources/SpeedMenuBar`: SwiftUI-Menubar-App und Views
-- `App/Info.plist`: App-Metadaten fuer das Bundle
+- `App/Info.plist`: App-Metadaten für das Bundle
 - `scripts/build-app.sh`: erzeugt lokal das `.app`-Bundle

@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SpeedMenuPanel: View {
     @Bindable var viewModel: SpeedTestViewModel
+    let onOpenSettings: () -> Void
 
     var body: some View {
         ZStack {
@@ -36,11 +37,32 @@ struct SpeedMenuPanel: View {
 
             Spacer(minLength: 12)
 
-            if let lastMeasuredClock = viewModel.lastMeasuredClock {
-                Text(lastMeasuredClock)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .glassPill()
+            HStack(spacing: 8) {
+                if let lastMeasuredClock = viewModel.lastMeasuredClock {
+                    Text(lastMeasuredClock)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .glassPill()
+                }
+
+                Button {
+                    onOpenSettings()
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, height: 30)
+                        .background(
+                            Circle()
+                                .fill(.thinMaterial)
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.8)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help("Einstellungen")
             }
         }
     }

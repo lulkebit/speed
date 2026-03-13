@@ -5,7 +5,7 @@ import SwiftUI
 @main
 struct SpeedMenuBarApp: App {
     @State
-    private var viewModel = SpeedTestViewModel()
+    private var appController = SpeedAppController()
 
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -13,12 +13,17 @@ struct SpeedMenuBarApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            SpeedMenuPanel(viewModel: viewModel)
+            SpeedMenuPanel(
+                viewModel: appController.speedTestViewModel,
+                onOpenSettings: {
+                    SettingsWindowController.shared.show(appController: appController)
+                }
+            )
                 .frame(width: 356)
         } label: {
             MenuBarStatusIcon(
-                symbolName: viewModel.menuBarSymbol,
-                isRunning: viewModel.isRunning
+                symbolName: appController.speedTestViewModel.menuBarSymbol,
+                isRunning: appController.speedTestViewModel.isRunning
             )
         }
         .menuBarExtraStyle(.window)
