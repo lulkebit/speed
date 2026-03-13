@@ -22,5 +22,5 @@ if command -v codesign >/dev/null 2>&1; then
     codesign --force --deep --sign - "$APP_DIR" >/dev/null 2>&1 || true
 fi
 
-echo "App bundle erstellt:"
+echo "App bundle created:"
 echo "$APP_DIR"

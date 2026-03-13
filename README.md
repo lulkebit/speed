@@ -1,40 +1,37 @@
 # Speed
 
-Native macOS-Menubar-App mit integriertem Internet-Speedtest im Dropdown.
+Speed is a lightweight macOS menu bar app for quick network checks without leaving the menu bar.
 
-## Was die erste Version kann
+## Preview
 
-- lebt nur in der Menüleiste
-- öffnet ein kompaktes, übersichtliches Dropdown mit Download, Upload, Ping und Reaktionszeit
-- nutzt den nativen macOS-Speedtest `networkQuality`
-- erlaubt erneutes Starten und Abbrechen einer laufenden Messung
-- bietet ein Einstellungsfenster für Autostart und automatische Testintervalle
-- lässt sich als `.app`-Bundle bauen
+![Speed menu bar popover](docs/images/menu-popover.png)
 
-## Voraussetzungen
+![Speed settings window](docs/images/settings-window.png)
 
-- macOS 14 oder neuer
-- Xcode Command Line Tools bzw. Xcode
+## What It Does
 
-## Entwicklung starten
+- Runs native macOS speed tests with `networkQuality`
+- Shows download, upload, latency, and responsiveness in a compact popover
+- Includes settings for launch at login and automatic test intervals
+
+## Download
+
+Download the latest build from [Releases](../../releases).
+
+1. Download the newest `SpeedMenuBar-...-macOS.zip`
+2. Move `SpeedMenuBar.app` to `/Applications`
+3. Open the app from Applications and run tests from the menu bar
+
+Note: release builds are currently ad-hoc signed and not notarized, so macOS may ask you to confirm the first launch.
+
+## Build From Source
 
 ```bash
-swift build
-swift run SpeedMenuBar
-```
-
-## Als App bauen
-
-```bash
+swift test
 ./scripts/build-app.sh
 open dist/SpeedMenuBar.app
 ```
 
-Im Popout erreichst du das Einstellungsfenster über das kleine Zahnrad oben rechts. Dort lassen sich Autostart und automatische Messungen konfigurieren. Der Autostart greift im gebauten `.app`-Bundle.
+## Contributing
 
-## Struktur
-
-- `Sources/SpeedCore`: Parsing, Service und ViewModel
-- `Sources/SpeedMenuBar`: SwiftUI-Menubar-App und Views
-- `App/Info.plist`: App-Metadaten für das Bundle
-- `scripts/build-app.sh`: erzeugt lokal das `.app`-Bundle
+See [CONTRIBUTING.md](CONTRIBUTING.md).

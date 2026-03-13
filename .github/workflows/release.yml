@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  create-release:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Run test suite
+        run: swift test
+
+      - name: Build app bundle
+        run: ./scripts/build-app.sh
+
+      - name: Prepare release metadata
+        id: meta
+        run: |
+          version_raw=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" App/Info.plist)
+          IFS='.' read -r major minor patch _ <<< "$version_raw"
+          major=${major:-0}
+          minor=${minor:-0}
+          patch=${patch:-0}
+          semver="${major}.${minor}.${patch}"
+          tag="v${semver}+${GITHUB_RUN_NUMBER}"
+          asset="SpeedMenuBar-${semver}-build-${GITHUB_RUN_NUMBER}-macOS.zip"
+
+          echo "semver=${semver}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "asset=${asset}" >> "$GITHUB_OUTPUT"
+
+      - name: Package release asset
+        run: |
+          mkdir -p release-assets
+          ditto -c -k --sequesterRsrc --keepParent dist/SpeedMenuBar.app "release-assets/${{ steps.meta.outputs.asset }}"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.asset }}
+          path: release-assets/${{ steps.meta.outputs.asset }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.meta.outputs.tag }}
+          RELEASE_NAME: Speed ${{ steps.meta.outputs.semver }} (build ${{ github.run_number }})
+          ASSET_PATH: release-assets/${{ steps.meta.outputs.asset }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" "$ASSET_PATH" --clobber
+          else
+            gh release create "$TAG_NAME" "$ASSET_PATH" \
+              --title "$RELEASE_NAME" \
+              --target "$GITHUB_SHA" \
+              --generate-notes \
+              --latest
+          fi
