@@ -20,7 +20,7 @@ struct SpeedMenuPanel: View {
             }
             .padding(18)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: SpeedChrome.panelCornerRadius, style: .continuous))
         .environment(\.locale, localization.locale)
     }
 

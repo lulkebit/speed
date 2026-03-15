@@ -78,7 +78,9 @@ struct GlassDivider: View {
     }
 }
 
-enum SpeedPalette {
+enum SpeedChrome {
+    static let panelCornerRadius: CGFloat = 20
+    static let sectionCornerRadius: CGFloat = 18
     static let stroke = Color.white.opacity(0.20)
 }
 
@@ -93,7 +95,7 @@ struct GlassPill: ViewModifier {
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .strokeBorder(SpeedPalette.stroke, lineWidth: 0.8)
+                    .strokeBorder(SpeedChrome.stroke, lineWidth: 0.8)
             )
     }
 }
@@ -106,12 +108,12 @@ extension View {
     func glassSection() -> some View {
         padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: SpeedChrome.sectionCornerRadius, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(SpeedPalette.stroke, lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: SpeedChrome.sectionCornerRadius, style: .continuous)
+                .strokeBorder(SpeedChrome.stroke, lineWidth: 0.8)
         )
     }
 }
