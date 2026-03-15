@@ -89,7 +89,7 @@ struct SpeedMenuPanel: View {
 
             if let progress = viewModel.estimatedProgress {
                 ProgressView(value: progress)
-                    .tint(Color.accentColor.opacity(0.8))
+                    .tint(SpeedChrome.brand.opacity(0.85))
                     .controlSize(.small)
             }
 
@@ -271,7 +271,7 @@ struct SpeedMenuPanel: View {
 
     private var summaryBadgeColor: Color {
         if viewModel.isRunning {
-            return .accentColor
+            return SpeedChrome.brand
         }
 
         if viewModel.errorMessage != nil {
@@ -341,7 +341,7 @@ struct SpeedMenuPanel: View {
     }
 
     private var primaryActionColor: Color {
-        viewModel.isRunning ? .red : .accentColor
+        viewModel.isRunning ? .red : SpeedChrome.brand
     }
 
     private func summaryMetric(

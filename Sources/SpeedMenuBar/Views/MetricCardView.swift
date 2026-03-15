@@ -89,6 +89,7 @@ enum SpeedChrome {
     static let panelWidth: CGFloat = 372
     static let panelCornerRadius: CGFloat = 20
     static let sectionCornerRadius: CGFloat = 18
+    static let brand = Color(red: 0.20, green: 0.55, blue: 0.98)
     static let stroke = Color.white.opacity(0.16)
     static let divider = Color.white.opacity(0.11)
     static let iconFill = Color.white.opacity(0.09)

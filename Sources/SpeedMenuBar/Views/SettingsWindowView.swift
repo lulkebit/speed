@@ -131,8 +131,8 @@ struct SettingsWindowView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.accentColor.opacity(0.22),
-                                Color.accentColor.opacity(0.08)
+                                SpeedChrome.brand.opacity(0.22),
+                                SpeedChrome.brand.opacity(0.08)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -140,12 +140,12 @@ struct SettingsWindowView: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.accentColor.opacity(0.12), lineWidth: 1)
+                            .stroke(SpeedChrome.brand.opacity(0.12), lineWidth: 1)
                     )
 
                 Image(systemName: "speedometer")
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(SpeedChrome.brand)
             }
             .frame(width: 64, height: 64)
 
@@ -246,7 +246,7 @@ struct SettingsWindowView: View {
         HStack(spacing: 6) {
             Image(systemName: appController.automaticTestInterval == .off ? "pause.circle.fill" : "clock.fill")
                 .foregroundStyle(
-                    appController.automaticTestInterval == .off ? Color.secondary : Color.accentColor
+                    appController.automaticTestInterval == .off ? Color.secondary : SpeedChrome.brand
                 )
 
             Text(appController.automaticTestInterval.shortTitle(using: appController.localization.strings))
@@ -268,7 +268,7 @@ struct SettingsWindowView: View {
     private var updateToneColor: Color {
         switch appController.updateStatusTone {
         case .neutral:
-            .accentColor
+            SpeedChrome.brand
         case .muted:
             .secondary
         case .informative:
