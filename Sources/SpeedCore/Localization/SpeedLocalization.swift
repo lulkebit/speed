@@ -88,6 +88,21 @@ public struct SpeedStrings: Sendable {
     public var launchAtLoginToggleTitle: String { catalog.launchAtLoginToggleTitle }
     public var settingsSectionAutomaticTests: String { catalog.settingsSectionAutomaticTests }
     public var automaticTestIntervalLabel: String { catalog.automaticTestIntervalLabel }
+    public var settingsSectionUpdates: String { catalog.settingsSectionUpdates }
+    public var updateAutomaticChecksToggleTitle: String { catalog.updateAutomaticChecksToggleTitle }
+    public var updateCheckButtonTitle: String { catalog.updateCheckButtonTitle }
+    public var updateCheckingButtonTitle: String { catalog.updateCheckingButtonTitle }
+    public var updateDownloadingButtonTitle: String { catalog.updateDownloadingButtonTitle }
+    public var updateInstallingButtonTitle: String { catalog.updateInstallingButtonTitle }
+    public var updateReleaseNotesTitle: String { catalog.updateReleaseNotesTitle }
+    public var updateStatusIdleTitle: String { catalog.updateStatusIdleTitle }
+    public var updateStatusDisabledTitle: String { catalog.updateStatusDisabledTitle }
+    public var updateStatusCheckingTitle: String { catalog.updateStatusCheckingTitle }
+    public var updateStatusUpToDateTitle: String { catalog.updateStatusUpToDateTitle }
+    public var updateStatusAvailableTitle: String { catalog.updateStatusAvailableTitle }
+    public var updateStatusDownloadingTitle: String { catalog.updateStatusDownloadingTitle }
+    public var updateStatusInstallingTitle: String { catalog.updateStatusInstallingTitle }
+    public var updateStatusFailedTitle: String { catalog.updateStatusFailedTitle }
     public var settingsSectionLanguage: String { catalog.settingsSectionLanguage }
     public var languagePickerLabel: String { catalog.languagePickerLabel }
     public var menuBarRunningHelp: String { catalog.menuBarRunningHelp }
@@ -190,6 +205,50 @@ public struct SpeedStrings: Sendable {
     public func launchAtLoginErrorDescription(_ error: LaunchAtLoginError) -> String {
         catalog.launchAtLoginErrorDescription(error)
     }
+
+    public func updateIdleDescription(version: String) -> String {
+        catalog.updateIdleDescription(version: version)
+    }
+
+    public func updateInstalledVersionDescription(version: String) -> String {
+        catalog.updateInstalledVersionDescription(version: version)
+    }
+
+    public func updateLastCheckedDescription(relative: String) -> String {
+        catalog.updateLastCheckedDescription(relative: relative)
+    }
+
+    public var updateNeverCheckedDescription: String {
+        catalog.updateNeverCheckedDescription
+    }
+
+    public func updateAutomaticChecksDisabledDescription(version: String) -> String {
+        catalog.updateAutomaticChecksDisabledDescription(version: version)
+    }
+
+    public func updateUpToDateDescription(version: String) -> String {
+        catalog.updateUpToDateDescription(version: version)
+    }
+
+    public func updateAvailableDescription(version: String) -> String {
+        catalog.updateAvailableDescription(version: version)
+    }
+
+    public func updateDownloadingDescription(version: String) -> String {
+        catalog.updateDownloadingDescription(version: version)
+    }
+
+    public func updateInstallingDescription(version: String) -> String {
+        catalog.updateInstallingDescription(version: version)
+    }
+
+    public func updateInstallButtonTitle(version: String) -> String {
+        catalog.updateInstallButtonTitle(version: version)
+    }
+
+    public func appUpdateErrorDescription(_ error: AppUpdateError) -> String {
+        catalog.appUpdateErrorDescription(error)
+    }
 }
 
 private protocol SpeedStringCatalog: Sendable {
@@ -199,6 +258,21 @@ private protocol SpeedStringCatalog: Sendable {
     var launchAtLoginToggleTitle: String { get }
     var settingsSectionAutomaticTests: String { get }
     var automaticTestIntervalLabel: String { get }
+    var settingsSectionUpdates: String { get }
+    var updateAutomaticChecksToggleTitle: String { get }
+    var updateCheckButtonTitle: String { get }
+    var updateCheckingButtonTitle: String { get }
+    var updateDownloadingButtonTitle: String { get }
+    var updateInstallingButtonTitle: String { get }
+    var updateReleaseNotesTitle: String { get }
+    var updateStatusIdleTitle: String { get }
+    var updateStatusDisabledTitle: String { get }
+    var updateStatusCheckingTitle: String { get }
+    var updateStatusUpToDateTitle: String { get }
+    var updateStatusAvailableTitle: String { get }
+    var updateStatusDownloadingTitle: String { get }
+    var updateStatusInstallingTitle: String { get }
+    var updateStatusFailedTitle: String { get }
     var settingsSectionLanguage: String { get }
     var languagePickerLabel: String { get }
     var menuBarRunningHelp: String { get }
@@ -255,6 +329,17 @@ private protocol SpeedStringCatalog: Sendable {
     func footerLastMeasured(relative: String) -> String
     func networkQualityErrorDescription(_ error: NetworkQualityError) -> String
     func launchAtLoginErrorDescription(_ error: LaunchAtLoginError) -> String
+    func updateIdleDescription(version: String) -> String
+    func updateInstalledVersionDescription(version: String) -> String
+    func updateLastCheckedDescription(relative: String) -> String
+    var updateNeverCheckedDescription: String { get }
+    func updateAutomaticChecksDisabledDescription(version: String) -> String
+    func updateUpToDateDescription(version: String) -> String
+    func updateAvailableDescription(version: String) -> String
+    func updateDownloadingDescription(version: String) -> String
+    func updateInstallingDescription(version: String) -> String
+    func updateInstallButtonTitle(version: String) -> String
+    func appUpdateErrorDescription(_ error: AppUpdateError) -> String
 }
 
 private struct GermanSpeedStrings: SpeedStringCatalog {
@@ -264,6 +349,21 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
     let launchAtLoginToggleTitle = "Speed bei der Anmeldung starten"
     let settingsSectionAutomaticTests = "Automatische Messungen"
     let automaticTestIntervalLabel = "Intervall"
+    let settingsSectionUpdates = "Updates"
+    let updateAutomaticChecksToggleTitle = "Automatisch nach Updates suchen"
+    let updateCheckButtonTitle = "Jetzt nach Updates suchen"
+    let updateCheckingButtonTitle = "Suche nach Updates..."
+    let updateDownloadingButtonTitle = "Update wird geladen..."
+    let updateInstallingButtonTitle = "Update wird installiert..."
+    let updateReleaseNotesTitle = "Release in GitHub ansehen"
+    let updateStatusIdleTitle = "Bereit"
+    let updateStatusDisabledTitle = "Update-Suche pausiert"
+    let updateStatusCheckingTitle = "Suche läuft"
+    let updateStatusUpToDateTitle = "Alles aktuell"
+    let updateStatusAvailableTitle = "Update verfügbar"
+    let updateStatusDownloadingTitle = "Download läuft"
+    let updateStatusInstallingTitle = "Installation läuft"
+    let updateStatusFailedTitle = "Update fehlgeschlagen"
     let settingsSectionLanguage = "Sprache"
     let languagePickerLabel = "App-Sprache"
     let menuBarRunningHelp = "Speedtest läuft"
@@ -461,6 +561,71 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
             return "Autostart konnte nicht aktualisiert werden."
         }
     }
+
+    func updateIdleDescription(version _: String) -> String {
+        "Automatische Update-Prüfungen sind aktiviert."
+    }
+
+    func updateInstalledVersionDescription(version: String) -> String {
+        "Installierte Version: \(version)"
+    }
+
+    func updateLastCheckedDescription(relative: String) -> String {
+        "Zuletzt geprüft \(relative)"
+    }
+
+    var updateNeverCheckedDescription: String {
+        "Noch keine Update-Prüfung durchgeführt."
+    }
+
+    func updateAutomaticChecksDisabledDescription(version _: String) -> String {
+        "Automatische Update-Prüfungen sind ausgeschaltet."
+    }
+
+    func updateUpToDateDescription(version _: String) -> String {
+        "Es ist kein neues Update verfügbar."
+    }
+
+    func updateAvailableDescription(version: String) -> String {
+        "Version \(version) ist verfügbar und kann direkt installiert werden."
+    }
+
+    func updateDownloadingDescription(version: String) -> String {
+        "Version \(version) wird heruntergeladen."
+    }
+
+    func updateInstallingDescription(version: String) -> String {
+        "Version \(version) wird installiert. Speed startet danach automatisch neu."
+    }
+
+    func updateInstallButtonTitle(version: String) -> String {
+        "Version \(version) installieren"
+    }
+
+    func appUpdateErrorDescription(_ error: AppUpdateError) -> String {
+        switch error {
+        case .invalidServerResponse:
+            return "Die Antwort von GitHub konnte nicht verarbeitet werden."
+        case let .unexpectedStatusCode(statusCode):
+            return "GitHub hat die Update-Anfrage mit Status \(statusCode) beantwortet."
+        case .releaseVersionMissing:
+            return "Im neuesten GitHub-Release wurde keine gültige Versionsnummer gefunden."
+        case .latestReleaseMissingAsset:
+            return "Im neuesten GitHub-Release wurde kein installierbares macOS-ZIP gefunden."
+        case .requiresBundledApp:
+            return "Updates können nur aus der gebauten .app installiert werden."
+        case .extractionFailed:
+            return "Das heruntergeladene Update konnte nicht entpackt werden."
+        case .extractedAppNotFound:
+            return "Das heruntergeladene Update enthält keine macOS-App."
+        case let .installerLaunchFailed(message):
+            if let message, !message.isEmpty {
+                return message
+            }
+
+            return "Der Update-Installer konnte nicht gestartet werden."
+        }
+    }
 }
 
 private struct EnglishSpeedStrings: SpeedStringCatalog {
@@ -470,6 +635,21 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
     let launchAtLoginToggleTitle = "Launch Speed when logging in"
     let settingsSectionAutomaticTests = "Automatic tests"
     let automaticTestIntervalLabel = "Interval"
+    let settingsSectionUpdates = "Updates"
+    let updateAutomaticChecksToggleTitle = "Automatically check for updates"
+    let updateCheckButtonTitle = "Check for updates now"
+    let updateCheckingButtonTitle = "Checking for updates..."
+    let updateDownloadingButtonTitle = "Downloading update..."
+    let updateInstallingButtonTitle = "Installing update..."
+    let updateReleaseNotesTitle = "View release on GitHub"
+    let updateStatusIdleTitle = "Ready"
+    let updateStatusDisabledTitle = "Update checks paused"
+    let updateStatusCheckingTitle = "Checking now"
+    let updateStatusUpToDateTitle = "Up to date"
+    let updateStatusAvailableTitle = "Update available"
+    let updateStatusDownloadingTitle = "Downloading"
+    let updateStatusInstallingTitle = "Installing"
+    let updateStatusFailedTitle = "Update failed"
     let settingsSectionLanguage = "Language"
     let languagePickerLabel = "App language"
     let menuBarRunningHelp = "Speed test in progress"
@@ -665,6 +845,71 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
             }
 
             return "Launch at login could not be updated."
+        }
+    }
+
+    func updateIdleDescription(version _: String) -> String {
+        "Automatic update checks are enabled."
+    }
+
+    func updateInstalledVersionDescription(version: String) -> String {
+        "Installed version: \(version)"
+    }
+
+    func updateLastCheckedDescription(relative: String) -> String {
+        "Last checked \(relative)"
+    }
+
+    var updateNeverCheckedDescription: String {
+        "No update check has been run yet."
+    }
+
+    func updateAutomaticChecksDisabledDescription(version _: String) -> String {
+        "Automatic update checks are turned off."
+    }
+
+    func updateUpToDateDescription(version _: String) -> String {
+        "No newer update is available."
+    }
+
+    func updateAvailableDescription(version: String) -> String {
+        "Version \(version) is available and ready to install."
+    }
+
+    func updateDownloadingDescription(version: String) -> String {
+        "Downloading version \(version)."
+    }
+
+    func updateInstallingDescription(version: String) -> String {
+        "Installing version \(version). Speed will relaunch automatically."
+    }
+
+    func updateInstallButtonTitle(version: String) -> String {
+        "Install version \(version)"
+    }
+
+    func appUpdateErrorDescription(_ error: AppUpdateError) -> String {
+        switch error {
+        case .invalidServerResponse:
+            return "GitHub returned an unreadable update response."
+        case let .unexpectedStatusCode(statusCode):
+            return "GitHub responded to the update request with status \(statusCode)."
+        case .releaseVersionMissing:
+            return "The latest GitHub release does not contain a valid version."
+        case .latestReleaseMissingAsset:
+            return "The latest GitHub release does not contain an installable macOS zip."
+        case .requiresBundledApp:
+            return "Updates can only be installed from the bundled .app."
+        case .extractionFailed:
+            return "The downloaded update archive could not be extracted."
+        case .extractedAppNotFound:
+            return "The downloaded update does not contain a macOS app."
+        case let .installerLaunchFailed(message):
+            if let message, !message.isEmpty {
+                return message
+            }
+
+            return "The update installer could not be started."
         }
     }
 }

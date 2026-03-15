@@ -4,6 +4,7 @@ public final class SpeedSettingsStore {
     private enum Key {
         static let automaticTestInterval = "automaticTestInterval"
         static let appLanguage = "appLanguage"
+        static let automaticallyChecksForUpdates = "automaticallyChecksForUpdates"
     }
 
     private let userDefaults: UserDefaults
@@ -32,6 +33,19 @@ public final class SpeedSettingsStore {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: Key.appLanguage)
+        }
+    }
+
+    public var automaticallyChecksForUpdates: Bool {
+        get {
+            guard userDefaults.object(forKey: Key.automaticallyChecksForUpdates) != nil else {
+                return true
+            }
+
+            return userDefaults.bool(forKey: Key.automaticallyChecksForUpdates)
+        }
+        set {
+            userDefaults.set(newValue, forKey: Key.automaticallyChecksForUpdates)
         }
     }
 }

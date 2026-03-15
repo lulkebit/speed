@@ -5,10 +5,19 @@ import SwiftUI
 @main
 struct SpeedMenuBarApp: App {
     @State
-    private var appController = SpeedAppController()
+    private var appController: SpeedAppController
 
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
+        _appController = State(
+            initialValue: SpeedAppController(
+                applicationTerminator: {
+                    Task { @MainActor in
+                        NSApplication.shared.terminate(nil)
+                    }
+                }
+            )
+        )
     }
 
     var body: some Scene {
