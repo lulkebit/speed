@@ -8,7 +8,7 @@ struct SettingsWindowView: View {
     var body: some View {
         let strings = appController.localization.strings
 
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 18) {
             header
 
             Form {
@@ -72,6 +72,7 @@ struct SettingsWindowView: View {
                         Button(appController.updateCheckButtonTitle) {
                             appController.checkForUpdates()
                         }
+                        .buttonStyle(.bordered)
                         .disabled(!appController.canCheckForUpdates)
 
                         if appController.shouldShowInstallUpdateButton {
@@ -116,23 +117,81 @@ struct SettingsWindowView: View {
             Spacer()
         }
         .padding(24)
-        .frame(minWidth: 520, minHeight: 420)
+        .frame(minWidth: 560, minHeight: 448)
         .background(WindowTitleUpdater(title: strings.settingsTitle))
         .environment(\.locale, appController.localization.locale)
     }
 
     private var header: some View {
-        Text(appController.localization.strings.settingsTitle)
-            .font(.system(size: 24, weight: .semibold))
+        let strings = appController.localization.strings
+
+        return HStack(alignment: .center, spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.22),
+                                Color.accentColor.opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.accentColor.opacity(0.12), lineWidth: 1)
+                    )
+
+                Image(systemName: "speedometer")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+            .frame(width: 64, height: 64)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(strings.appName)
+                    .font(.system(size: 28, weight: .semibold))
+
+                Text(strings.settingsTitle)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                Text(appController.installedVersionDescription)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+            }
+
+            Spacer(minLength: 16)
+
+            VStack(alignment: .trailing, spacing: 8) {
+                scheduleBadge
+
+                Text(appController.nextAutomaticTestDescription)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 220, alignment: .trailing)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.88))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        )
     }
 
     private var updateStatusCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(updateToneColor.opacity(0.14))
-                        .frame(width: 30, height: 30)
+                        .frame(width: 34, height: 34)
 
                     if appController.showsUpdateProgressIndicator {
                         ProgressView()
@@ -161,25 +220,48 @@ struct SettingsWindowView: View {
             Divider()
 
             HStack(spacing: 12) {
-                Text(appController.installedVersionDescription)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
+                Label(appController.installedVersionDescription, systemImage: "shippingbox")
+                    .lineLimit(1)
 
                 Spacer(minLength: 0)
 
-                Text(appController.updateLastCheckedDescription)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
+                Label(appController.updateLastCheckedDescription, systemImage: "clock")
+                    .lineLimit(1)
             }
+            .font(.system(size: 11.5, weight: .medium))
+            .foregroundStyle(.secondary)
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(updateCardBackgroundColor)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.92))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(updateToneColor.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        )
+    }
+
+    private var scheduleBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: appController.automaticTestInterval == .off ? "pause.circle.fill" : "clock.fill")
+                .foregroundStyle(
+                    appController.automaticTestInterval == .off ? Color.secondary : Color.accentColor
+                )
+
+            Text(appController.automaticTestInterval.shortTitle(using: appController.localization.strings))
+                .foregroundStyle(.secondary)
+        }
+        .font(.system(size: 11.5, weight: .semibold))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
         )
     }
 
@@ -200,22 +282,6 @@ struct SettingsWindowView: View {
         }
     }
 
-    private var updateCardBackgroundColor: Color {
-        switch appController.updateStatusTone {
-        case .neutral:
-            return .accentColor.opacity(0.08)
-        case .muted:
-            return .secondary.opacity(0.08)
-        case .informative:
-            return .blue.opacity(0.08)
-        case .success:
-            return .green.opacity(0.08)
-        case .accent:
-            return .orange.opacity(0.08)
-        case .error:
-            return .red.opacity(0.08)
-        }
-    }
 }
 
 private struct WindowTitleUpdater: NSViewRepresentable {

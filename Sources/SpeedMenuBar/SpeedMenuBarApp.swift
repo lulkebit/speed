@@ -29,7 +29,7 @@ struct SpeedMenuBarApp: App {
                     SettingsWindowController.shared.show(appController: appController)
                 }
             )
-            .frame(width: 356)
+            .frame(width: SpeedChrome.panelWidth)
             .environment(\.locale, appController.localization.locale)
         } label: {
             MenuBarStatusIcon(
