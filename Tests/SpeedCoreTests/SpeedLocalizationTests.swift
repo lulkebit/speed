@@ -66,6 +66,28 @@ final class SpeedLocalizationTests: XCTestCase {
         XCTAssertEqual(localization.resolvedLanguage, .english)
     }
 
+    func testSystemLanguageRemainsIndependentFromExplicitAppLanguage() {
+        let suiteName = "SpeedLocalizationTests-\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Expected dedicated user defaults suite.")
+        }
+
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let settingsStore = SpeedSettingsStore(userDefaults: userDefaults)
+        settingsStore.appLanguage = .english
+
+        let localization = SpeedLocalization(
+            settingsStore: settingsStore,
+            preferredLanguagesProvider: { ["de-DE"] }
+        )
+
+        XCTAssertEqual(localization.resolvedLanguage, .english)
+        XCTAssertEqual(localization.systemLanguage, .german)
+    }
+
     func testRefreshSystemLanguageUpdatesResolvedLanguage() {
         let suiteName = "SpeedLocalizationTests-\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {

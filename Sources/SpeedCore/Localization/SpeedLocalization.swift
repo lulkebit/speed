@@ -41,6 +41,10 @@ public final class SpeedLocalization {
         resolvedLanguage.locale
     }
 
+    public var systemLanguage: SupportedLanguage {
+        AppLanguage.system.resolvedLanguage(preferredLanguages: preferredLanguagesProvider())
+    }
+
     public var strings: SpeedStrings {
         SpeedStrings(language: resolvedLanguage)
     }

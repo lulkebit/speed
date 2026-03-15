@@ -69,7 +69,7 @@ struct SettingsWindowView: View {
                             Text(
                                 strings.appLanguageOptionTitle(
                                     language,
-                                    resolvedSystemLanguage: appController.localization.resolvedLanguage
+                                    resolvedSystemLanguage: appController.localization.systemLanguage
                                 )
                             )
                             .tag(language)
