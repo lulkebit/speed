@@ -55,6 +55,29 @@ final class GitHubReleaseUpdaterTests: XCTestCase {
         XCTAssertEqual(result, .upToDate)
     }
 
+    func testCheckForUpdatesIgnoresBuildMetadataInReleaseTag() async throws {
+        let updater = GitHubReleaseUpdater(
+            installedVersion: "1.2.0",
+            bundleURLProvider: { URL(filePath: "/Applications/SpeedMenuBar.app") },
+            dataLoader: { _ in
+                (
+                    Self.latestReleaseResponse(
+                        tagName: "v1.2.0+5",
+                        assetNames: ["SpeedMenuBar-1.2.0-macOS.zip"]
+                    ),
+                    Self.successResponse()
+                )
+            },
+            fileDownloader: { _ in
+                throw XCTSkip("Not used in this test.")
+            }
+        )
+
+        let result = try await updater.checkForUpdates()
+
+        XCTAssertEqual(result, .upToDate)
+    }
+
     func testCheckForUpdatesFailsWhenLatestReleaseHasNoZipAsset() async throws {
         let updater = GitHubReleaseUpdater(
             installedVersion: "1.1.0",

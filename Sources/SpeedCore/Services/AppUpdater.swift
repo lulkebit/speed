@@ -215,16 +215,20 @@ private extension GitHubReleaseUpdater {
             return nil
         }
 
-        let trimmedVersion = rawVersion.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmedVersion = rawVersion.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedVersion.isEmpty else {
             return nil
         }
 
         if trimmedVersion.first == "v" || trimmedVersion.first == "V" {
-            return String(trimmedVersion.dropFirst())
+            trimmedVersion = String(trimmedVersion.dropFirst())
         }
 
-        return trimmedVersion
+        if let buildMetadataStart = trimmedVersion.firstIndex(of: "+") {
+            trimmedVersion = String(trimmedVersion[..<buildMetadataStart])
+        }
+
+        return trimmedVersion.isEmpty ? nil : trimmedVersion
     }
 
     static func compareVersions(_ lhs: String, _ rhs: String) -> ComparisonResult {

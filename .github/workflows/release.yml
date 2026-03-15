@@ -40,8 +40,8 @@ jobs:
           minor=${minor:-0}
           patch=${patch:-0}
           semver="${major}.${minor}.${patch}"
-          tag="v${semver}+${GITHUB_RUN_NUMBER}"
-          asset="SpeedMenuBar-${semver}-build-${GITHUB_RUN_NUMBER}-macOS.zip"
+          tag="v${semver}"
+          asset="SpeedMenuBar-${semver}-macOS.zip"
 
           echo "semver=${semver}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
@@ -64,10 +64,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ steps.meta.outputs.tag }}
-          RELEASE_NAME: Speed ${{ steps.meta.outputs.semver }} (build ${{ github.run_number }})
+          RELEASE_NAME: Speed ${{ steps.meta.outputs.semver }}
           ASSET_PATH: release-assets/${{ steps.meta.outputs.asset }}
         run: |
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" \
+              --title "$RELEASE_NAME" \
+              --latest
             gh release upload "$TAG_NAME" "$ASSET_PATH" --clobber
           else
             gh release create "$TAG_NAME" "$ASSET_PATH" \
