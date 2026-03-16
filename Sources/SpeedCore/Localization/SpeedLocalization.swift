@@ -137,9 +137,12 @@ public struct SpeedStrings: Sendable {
     public var summaryBadgeLive: String { catalog.summaryBadgeLive }
     public var metricPingTitle: String { catalog.metricPingTitle }
     public var metricPingNote: String { catalog.metricPingNote }
+    public var metricPingHelp: String { catalog.metricPingHelp }
     public var metricResponsivenessTitle: String { catalog.metricResponsivenessTitle }
     public var metricResponsivenessNote: String { catalog.metricResponsivenessNote }
+    public var metricResponsivenessHelp: String { catalog.metricResponsivenessHelp }
     public var metricNetworkTitle: String { catalog.metricNetworkTitle }
+    public var metricNetworkHelp: String { catalog.metricNetworkHelp }
     public var quitButtonTitle: String { catalog.quitButtonTitle }
     public var statusRunning: String { catalog.statusRunning }
     public var statusEmpty: String { catalog.statusEmpty }
@@ -335,9 +338,12 @@ private protocol SpeedStringCatalog: Sendable {
     var summaryBadgeLive: String { get }
     var metricPingTitle: String { get }
     var metricPingNote: String { get }
+    var metricPingHelp: String { get }
     var metricResponsivenessTitle: String { get }
     var metricResponsivenessNote: String { get }
+    var metricResponsivenessHelp: String { get }
     var metricNetworkTitle: String { get }
+    var metricNetworkHelp: String { get }
     var quitButtonTitle: String { get }
     var statusRunning: String { get }
     var statusEmpty: String { get }
@@ -445,9 +451,12 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
     let summaryBadgeLive = "Live"
     let metricPingTitle = "Ping"
     let metricPingNote = "Leerlauf"
+    let metricPingHelp = "Leerlauf-Latenz: Wie lange eine kleine Anfrage ohne Last bis zur Antwort braucht. Niedriger ist besser."
     let metricResponsivenessTitle = "Reaktion"
     let metricResponsivenessNote = "Apps und Calls"
+    let metricResponsivenessHelp = "Reaktionszeit unter Last: Wie schnell Apps, Calls und Webseiten antworten, wenn die Leitung gerade beschäftigt ist. Niedriger ist besser."
     let metricNetworkTitle = "Netzwerk"
+    let metricNetworkHelp = "Rechts steht die aktive macOS-Schnittstelle wie en0. Darunter siehst du den Server, den der Test verwendet."
     let quitButtonTitle = "Beenden"
     let statusRunning = "Download, Upload und Reaktionszeit werden gerade gemessen."
     let statusEmpty = "Ein Klick startet den nativen macOS-Speedtest direkt aus der Menüleiste."
@@ -777,9 +786,12 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
     let summaryBadgeLive = "Live"
     let metricPingTitle = "Ping"
     let metricPingNote = "Idle"
+    let metricPingHelp = "Idle latency: how long a small request takes when the connection is not busy. Lower is better."
     let metricResponsivenessTitle = "Responsiveness"
     let metricResponsivenessNote = "Apps and calls"
+    let metricResponsivenessHelp = "Latency under load: how quickly apps, calls, and pages respond while the connection is busy. Lower is better."
     let metricNetworkTitle = "Network"
+    let metricNetworkHelp = "Shows the active macOS network interface on the right, such as en0. The line below shows the server used for the test."
     let quitButtonTitle = "Quit"
     let statusRunning = "Download, upload, and responsiveness are being measured right now."
     let statusEmpty = "One click starts the native macOS speed test right from the menu bar."

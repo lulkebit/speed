@@ -184,7 +184,8 @@ struct SpeedMenuPanel: View {
                 title: localization.strings.metricPingTitle,
                 value: viewModel.idleLatencyValue,
                 unit: "ms",
-                icon: "timer"
+                icon: "timer",
+                helpText: localization.strings.metricPingHelp
             )
 
             SubtleDivider()
@@ -193,7 +194,8 @@ struct SpeedMenuPanel: View {
                 title: localization.strings.metricResponsivenessTitle,
                 value: viewModel.responsivenessValue,
                 unit: "ms",
-                icon: "bolt.badge.clock"
+                icon: "bolt.badge.clock",
+                helpText: localization.strings.metricResponsivenessHelp
             )
 
             SubtleDivider()
@@ -203,9 +205,11 @@ struct SpeedMenuPanel: View {
                 value: viewModel.interfaceLabel,
                 unit: "",
                 icon: "wifi",
-                note: viewModel.serverLabel
+                note: viewModel.serverLabel,
+                helpText: localization.strings.metricNetworkHelp
             )
         }
+        .zIndex(20)
     }
 
     private var footer: some View {

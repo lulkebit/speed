@@ -112,6 +112,36 @@ final class SpeedLocalizationTests: XCTestCase {
 
         XCTAssertEqual(localization.resolvedLanguage, .english)
     }
+
+    func testMetricHelpStringsAreLocalized() {
+        let germanStrings = SpeedStrings(language: .german)
+        let englishStrings = SpeedStrings(language: .english)
+
+        XCTAssertEqual(
+            germanStrings.metricPingHelp,
+            "Leerlauf-Latenz: Wie lange eine kleine Anfrage ohne Last bis zur Antwort braucht. Niedriger ist besser."
+        )
+        XCTAssertEqual(
+            germanStrings.metricResponsivenessHelp,
+            "Reaktionszeit unter Last: Wie schnell Apps, Calls und Webseiten antworten, wenn die Leitung gerade beschäftigt ist. Niedriger ist besser."
+        )
+        XCTAssertEqual(
+            germanStrings.metricNetworkHelp,
+            "Rechts steht die aktive macOS-Schnittstelle wie en0. Darunter siehst du den Server, den der Test verwendet."
+        )
+        XCTAssertEqual(
+            englishStrings.metricPingHelp,
+            "Idle latency: how long a small request takes when the connection is not busy. Lower is better."
+        )
+        XCTAssertEqual(
+            englishStrings.metricResponsivenessHelp,
+            "Latency under load: how quickly apps, calls, and pages respond while the connection is busy. Lower is better."
+        )
+        XCTAssertEqual(
+            englishStrings.metricNetworkHelp,
+            "Shows the active macOS network interface on the right, such as en0. The line below shows the server used for the test."
+        )
+    }
 }
 
 private final class PreferredLanguagesBox: @unchecked Sendable {

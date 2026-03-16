@@ -6,19 +6,25 @@ struct MetricRowView: View {
     let unit: String
     let icon: String
     let note: String?
+    let helpText: String?
+
+    @State
+    private var isShowingHelpOverlay = false
 
     init(
         title: String,
         value: String,
         unit: String,
         icon: String,
-        note: String? = nil
+        note: String? = nil,
+        helpText: String? = nil
     ) {
         self.title = title
         self.value = value
         self.unit = unit
         self.icon = icon
         self.note = note
+        self.helpText = helpText
     }
 
     var body: some View {
@@ -34,9 +40,15 @@ struct MetricRowView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundStyle(SpeedChrome.textPrimary)
+                    HStack(alignment: .center, spacing: 6) {
+                        Text(title)
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundStyle(SpeedChrome.textPrimary)
+
+                        if let helpText, !helpText.isEmpty {
+                            MetricHelpIcon(isHovered: $isShowingHelpOverlay)
+                        }
+                    }
 
                     if let note, !note.isEmpty {
                         Text(note)
@@ -67,6 +79,75 @@ struct MetricRowView: View {
         }
         .padding(.horizontal, 2)
         .padding(.vertical, 10)
+        .overlay(alignment: .topLeading) {
+            if let helpText, !helpText.isEmpty, isShowingHelpOverlay {
+                MetricHelpOverlay(text: helpText)
+                    .offset(x: 68, y: 28)
+                    .transition(
+                        .opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading))
+                    )
+                    .allowsHitTesting(false)
+            }
+        }
+        .zIndex(isShowingHelpOverlay ? 20 : 0)
+        .animation(.easeOut(duration: 0.14), value: isShowingHelpOverlay)
+    }
+}
+
+private struct MetricHelpIcon: View {
+    @Binding
+    var isHovered: Bool
+
+    var body: some View {
+        Image(systemName: "questionmark.circle.fill")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(isHovered ? SpeedChrome.textPrimary : SpeedChrome.textTertiary)
+            .frame(width: 16, height: 16)
+            .background(
+                Circle()
+                    .fill(isHovered ? SpeedChrome.softFill.opacity(1.1) : SpeedChrome.softFill.opacity(0.6))
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+}
+
+private struct MetricHelpOverlay: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .frame(width: 10, height: 10)
+                .rotationEffect(.degrees(45))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .stroke(SpeedChrome.stroke, lineWidth: 0.8)
+                        .rotationEffect(.degrees(45))
+                )
+                .padding(.leading, 14)
+                .offset(y: 5)
+
+            Text(text)
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundStyle(SpeedChrome.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(width: 220, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(nsColor: .windowBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(SpeedChrome.stroke, lineWidth: 0.8)
+                )
+                .shadow(color: .black.opacity(0.16), radius: 12, y: 5)
+        }
     }
 }
 
