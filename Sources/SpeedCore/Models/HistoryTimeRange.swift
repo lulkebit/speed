@@ -1,6 +1,7 @@
 import Foundation
 
 public enum HistoryTimeRange: String, CaseIterable, Identifiable, Sendable {
+    case hour
     case day
     case week
     case month
@@ -11,6 +12,8 @@ public enum HistoryTimeRange: String, CaseIterable, Identifiable, Sendable {
 
     public var duration: TimeInterval {
         switch self {
+        case .hour:
+            3_600
         case .day:
             86_400
         case .week:
@@ -30,6 +33,8 @@ public enum HistoryTimeRange: String, CaseIterable, Identifiable, Sendable {
 
     public func axisFormatStyle(locale: Locale) -> Date.FormatStyle {
         switch self {
+        case .hour:
+            return Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)
         case .day:
             return Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)
         case .week:

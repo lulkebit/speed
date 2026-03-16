@@ -590,6 +590,8 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
 
     func historyTimeRangeTitle(_ range: HistoryTimeRange) -> String {
         switch range {
+        case .hour:
+            "1 Std."
         case .day:
             "24 Std."
         case .week:
@@ -920,6 +922,8 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
 
     func historyTimeRangeTitle(_ range: HistoryTimeRange) -> String {
         switch range {
+        case .hour:
+            "1h"
         case .day:
             "24h"
         case .week:
