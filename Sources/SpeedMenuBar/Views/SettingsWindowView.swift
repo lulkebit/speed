@@ -224,6 +224,16 @@ struct SettingsWindowView: View {
         let strings = appController.localization.strings
 
         return HStack(alignment: .center, spacing: 18) {
+            Image(nsImage: settingsIconImage)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                )
+
             VStack(alignment: .leading, spacing: 6) {
                 Text(strings.appName)
                     .font(.system(size: 30, weight: .semibold))
@@ -248,6 +258,21 @@ struct SettingsWindowView: View {
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 22)
+    }
+
+    private var settingsIconImage: NSImage {
+        if let bundledIcon = AppBundleIconLoader.load() {
+            return bundledIcon
+        }
+
+        if let runningIcon = NSRunningApplication.current.icon, runningIcon.isValid {
+            return runningIcon
+        }
+
+        return NSImage(
+            systemSymbolName: "gauge.with.needle",
+            accessibilityDescription: nil
+        ) ?? NSApplication.shared.applicationIconImage
     }
 
     private var sectionDivider: some View {
@@ -412,6 +437,80 @@ private struct WindowTitleUpdater: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
             nsView.window?.title = title
+        }
+    }
+}
+
+private enum AppBundleIconLoader {
+    static func load() -> NSImage? {
+        if let iconBaseName = Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") as? String {
+            let normalizedName = iconBaseName.replacingOccurrences(of: ".icns", with: "")
+
+            if let iconURL = Bundle.main.url(forResource: normalizedName, withExtension: "icns"),
+               let iconImage = NSImage(contentsOf: iconURL) {
+                return iconImage
+            }
+
+            if let iconURL = Bundle.main.url(forResource: normalizedName, withExtension: "svg"),
+               let iconImage = NSImage(contentsOf: iconURL) {
+                return iconImage
+            }
+        }
+
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let iconImage = NSImage(contentsOf: iconURL) {
+            return iconImage
+        }
+
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "svg"),
+           let iconImage = NSImage(contentsOf: iconURL) {
+            return iconImage
+        }
+
+        if let developmentIcon = loadDevelopmentIcon() {
+            return developmentIcon
+        }
+
+        return nil
+    }
+
+    private static func loadDevelopmentIcon() -> NSImage? {
+        for root in candidateRoots() {
+            let icnsURL = root.appendingPathComponent("App/AppIcon.icns")
+            if let iconImage = NSImage(contentsOf: icnsURL) {
+                return iconImage
+            }
+
+            let svgURL = root.appendingPathComponent("App/AppIcon.svg")
+            if let iconImage = NSImage(contentsOf: svgURL) {
+                return iconImage
+            }
+        }
+
+        return nil
+    }
+
+    private static func candidateRoots() -> [URL] {
+        var roots: [URL] = [
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+        ]
+
+        var currentURL = Bundle.main.bundleURL.standardizedFileURL
+
+        for _ in 0..<8 {
+            roots.append(currentURL)
+            let parentURL = currentURL.deletingLastPathComponent()
+
+            if parentURL == currentURL {
+                break
+            }
+
+            currentURL = parentURL
+        }
+
+        var uniquePaths = Set<String>()
+        return roots.filter { url in
+            uniquePaths.insert(url.path).inserted
         }
     }
 }
