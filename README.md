@@ -1,8 +1,14 @@
 # Speed
 
+<p align="center">
+  <img src="App/AppIcon.svg" alt="Speed app icon" width="120" />
+</p>
+
 Speed is a lightweight macOS menu bar app for running quick network checks without leaving the menu bar.
 
 It uses Apple's native `networkQuality` tool and keeps the results easy to scan, easy to compare, and close at hand.
+
+Live website: [speed.lukeschroeter.de](https://speed.lukeschroeter.de)
 
 ## Preview
 
