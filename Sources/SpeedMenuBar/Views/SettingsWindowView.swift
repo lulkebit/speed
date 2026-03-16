@@ -25,13 +25,15 @@ struct SettingsWindowView: View {
                                 detail: appController.launchAtLoginDescription
                             ) {
                                 Toggle(
-                                    "",
+                                    strings.launchAtLoginToggleTitle,
                                     isOn: Binding(
                                         get: { appController.launchAtLoginState.isEnabledForToggle },
                                         set: { appController.setLaunchAtLoginEnabled($0) }
                                     )
                                 )
                                 .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
                                 .disabled(!appController.canConfigureLaunchAtLogin)
                             }
 
@@ -56,16 +58,22 @@ struct SettingsWindowView: View {
                                             .tag(interval)
                                     }
                                 }
+                                .labelsHidden()
                                 .pickerStyle(.menu)
-                                .frame(width: 180)
+                                .frame(width: 220, alignment: .trailing)
                             }
 
                             SettingsRow(
                                 title: strings.automaticTestOnNetworkChangeTitle,
                                 detail: strings.automaticTestOnNetworkChangeDescription
                             ) {
-                                Toggle("", isOn: $appController.automaticallyTestsOnNetworkChange)
-                                    .labelsHidden()
+                                Toggle(
+                                    strings.automaticTestOnNetworkChangeTitle,
+                                    isOn: $appController.automaticallyTestsOnNetworkChange
+                                )
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
                             }
                         }
 
@@ -85,8 +93,9 @@ struct SettingsWindowView: View {
                                             .tag(displayMode)
                                     }
                                 }
+                                .labelsHidden()
                                 .pickerStyle(.menu)
-                                .frame(width: 180)
+                                .frame(width: 220, alignment: .trailing)
                             }
 
                             SettingsRow(
@@ -113,8 +122,13 @@ struct SettingsWindowView: View {
                                 title: strings.updateAutomaticChecksToggleTitle,
                                 detail: nil
                             ) {
-                                Toggle("", isOn: $appController.automaticallyChecksForUpdates)
-                                    .labelsHidden()
+                                Toggle(
+                                    strings.updateAutomaticChecksToggleTitle,
+                                    isOn: $appController.automaticallyChecksForUpdates
+                                )
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
                             }
 
                             SettingsRow(
@@ -204,8 +218,9 @@ struct SettingsWindowView: View {
                                         .tag(language)
                                     }
                                 }
+                                .labelsHidden()
                                 .pickerStyle(.menu)
-                                .frame(width: 180)
+                                .frame(width: 220, alignment: .trailing)
                             }
                         }
                     }
