@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background Gradient: Deep Navy/Anthracite to Almost Black -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a3342" />
+      <stop offset="100%" stop-color="#0d1117" />
+    </linearGradient>
+    
+    <!-- Glass Highlight: Subtle lighting from top-left -->
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15" />
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.0" />
+    </linearGradient>
+
+    <!-- Glass Border: Inner reflection edge -->
+    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
+    </linearGradient>
+
+    <!-- Track Gradient: Subtle inactive arc -->
+    <linearGradient id="track" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02" />
+    </linearGradient>
+
+    <!-- Accent Gradient: Primary Blue to Green (Speed/Progress) -->
+    <linearGradient id="accent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0055FF" />
+      <stop offset="50%" stop-color="#00A3FF" />
+      <stop offset="100%" stop-color="#00E599" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base Rectangle -->
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)" />
+  
+  <!-- Glass Layer -->
+  <rect width="1024" height="1024" rx="230" fill="url(#glass)" />
+  
+  <!-- Glass Edge (Subtle Stroke) -->
+  <rect x="3" y="3" width="1018" height="1018" rx="227" fill="none" stroke="url(#border)" stroke-width="6" />
+
+  <!-- Speedometer Track (Background Arc) -->
+  <!-- 270 degree arc from 135° to 45°. Center 512,512, Radius 310 -->
+  <path d="M 293 731 A 310 310 0 1 1 731 731" fill="none" stroke="url(#track)" stroke-width="90" stroke-linecap="round" />
+
+  <!-- Active Speedometer Arc (Value) -->
+  <!-- Sweeps from 135° to 345° (approx 85% full). Large Arc Flag is 1 -->
+  <path d="M 293 731 A 310 310 0 1 1 811 432" fill="none" stroke="url(#accent)" stroke-width="90" stroke-linecap="round" />
+
+  <!-- Pointer Base -->
+  <circle cx="512" cy="512" r="45" fill="#ffffff" />
+
+  <!-- Pointer Needle -->
+  <!-- Pointing precisely to 345° (-15°). Length spans towards the active arc end -->
+  <line x1="512" y1="512" x2="725" y2="455" stroke="#ffffff" stroke-width="36" stroke-linecap="round" />
+  
+  <!-- Pointer Center Dot (Depth detail) -->
+  <circle cx="512" cy="512" r="14" fill="#0d1117" />
+</svg>
