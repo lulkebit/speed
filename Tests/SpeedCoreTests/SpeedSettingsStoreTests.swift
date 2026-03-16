@@ -71,4 +71,55 @@ final class SpeedSettingsStoreTests: XCTestCase {
         let reloadedStore = SpeedSettingsStore(userDefaults: userDefaults)
         XCTAssertFalse(reloadedStore.automaticallyChecksForUpdates)
     }
+
+    func testStoreDefaultsNetworkChangeTestsToEnabled() {
+        let suiteName = "SpeedSettingsStoreTests-\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Expected dedicated user defaults suite.")
+        }
+
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let store = SpeedSettingsStore(userDefaults: userDefaults)
+
+        XCTAssertTrue(store.automaticallyTestsOnNetworkChange)
+    }
+
+    func testStorePersistsNetworkChangeTestsPreference() {
+        let suiteName = "SpeedSettingsStoreTests-\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Expected dedicated user defaults suite.")
+        }
+
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let store = SpeedSettingsStore(userDefaults: userDefaults)
+        store.automaticallyTestsOnNetworkChange = false
+
+        let reloadedStore = SpeedSettingsStore(userDefaults: userDefaults)
+        XCTAssertFalse(reloadedStore.automaticallyTestsOnNetworkChange)
+    }
+
+    func testStorePersistsMenuBarDisplayMode() {
+        let suiteName = "SpeedSettingsStoreTests-\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Expected dedicated user defaults suite.")
+        }
+
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let store = SpeedSettingsStore(userDefaults: userDefaults)
+        XCTAssertEqual(store.menuBarDisplayMode, .icon)
+
+        store.menuBarDisplayMode = .downloadAndUpload
+
+        let reloadedStore = SpeedSettingsStore(userDefaults: userDefaults)
+        XCTAssertEqual(reloadedStore.menuBarDisplayMode, .downloadAndUpload)
+    }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import SpeedCore
 import SwiftUI
 
@@ -32,9 +33,9 @@ struct SpeedMenuBarApp: App {
             .frame(width: SpeedChrome.panelWidth)
             .environment(\.locale, appController.localization.locale)
         } label: {
-            MenuBarStatusIcon(
-                symbolName: appController.speedTestViewModel.menuBarSymbol,
-                isRunning: appController.speedTestViewModel.isRunning,
+            MenuBarStatusItem(
+                viewModel: appController.speedTestViewModel,
+                displayMode: appController.menuBarDisplayMode,
                 localization: appController.localization
             )
         }
@@ -42,16 +43,29 @@ struct SpeedMenuBarApp: App {
     }
 }
 
-private struct MenuBarStatusIcon: View {
-    let symbolName: String
-    let isRunning: Bool
+private struct MenuBarStatusItem: View {
+    @Bindable var viewModel: SpeedTestViewModel
+    let displayMode: MenuBarDisplayMode
     let localization: SpeedLocalization
 
     var body: some View {
-        Image(systemName: symbolName)
-            .symbolVariant(.fill)
-            .font(.system(size: 14, weight: .semibold))
-            .contentTransition(.symbolEffect(.replace))
-            .help(isRunning ? localization.strings.menuBarRunningHelp : localization.strings.menuBarOpenHelp)
+        HStack(spacing: 6) {
+            Image(systemName: viewModel.menuBarSymbol)
+                .symbolVariant(.fill)
+                .font(.system(size: 14, weight: .semibold))
+                .contentTransition(.symbolEffect(.replace))
+
+            if let menuBarText = viewModel.menuBarText(for: displayMode) {
+                Text(menuBarText)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+        }
+        .help(
+            viewModel.isRunning
+                ? localization.strings.menuBarRunningHelp
+                : localization.strings.menuBarOpenHelp
+        )
     }
 }

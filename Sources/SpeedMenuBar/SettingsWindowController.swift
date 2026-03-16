@@ -29,7 +29,7 @@ final class SettingsWindowController {
         window.titleVisibility = .visible
         window.toolbarStyle = .preference
         window.isReleasedWhenClosed = false
-        window.setContentSize(NSSize(width: 560, height: 500))
+        window.setContentSize(NSSize(width: 720, height: 780))
         window.center()
 
         self.window = window

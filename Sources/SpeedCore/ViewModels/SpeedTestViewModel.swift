@@ -6,13 +6,18 @@ import Observation
 public final class SpeedTestViewModel {
     public let localization: SpeedLocalization
     public private(set) var lastResult: SpeedTestResult?
+    public private(set) var history: [SpeedTestResult]
     public private(set) var isRunning = false
     public private(set) var elapsedSeconds = 0
+    public var onRunFinished: (@MainActor @Sendable () -> Void)?
 
     private var userFacingError: UserFacingError?
 
     @ObservationIgnored
     private let service: NetworkQualityService
+
+    @ObservationIgnored
+    private let historyStore: SpeedHistoryStore
 
     @ObservationIgnored
     private var testTask: Task<Void, Never>?
@@ -25,10 +30,16 @@ public final class SpeedTestViewModel {
 
     public init(
         service: NetworkQualityService = NetworkQualityService(),
+        historyStore: SpeedHistoryStore = SpeedHistoryStore(),
         localization: SpeedLocalization = SpeedLocalization()
     ) {
+        let history = historyStore.loadHistory()
+
         self.service = service
+        self.historyStore = historyStore
         self.localization = localization
+        self.history = history
+        self.lastResult = history.last
     }
 
     public var errorMessage: String? {
@@ -203,6 +214,33 @@ public final class SpeedTestViewModel {
         MetricFormatter.clockTimestamp(lastResult?.measuredAt, locale: localization.locale)
     }
 
+    public func menuBarText(for displayMode: MenuBarDisplayMode) -> String? {
+        guard displayMode != .icon else {
+            return nil
+        }
+
+        if isRunning {
+            return "\(elapsedSeconds)s"
+        }
+
+        guard errorMessage == nil, let lastResult else {
+            return nil
+        }
+
+        switch displayMode {
+        case .icon:
+            return nil
+        case .download:
+            return "\(MetricFormatter.speed(lastResult.downloadMbps, locale: localization.locale))↓"
+        case .latency:
+            return "\(MetricFormatter.milliseconds(lastResult.idleLatencyMs, locale: localization.locale)) ms"
+        case .downloadAndUpload:
+            let download = MetricFormatter.speed(lastResult.downloadMbps, locale: localization.locale)
+            let upload = MetricFormatter.speed(lastResult.uploadMbps, locale: localization.locale)
+            return "\(download)↓ \(upload)↑"
+        }
+    }
+
     public func handlePrimaryAction() {
         isRunning ? cancel() : start()
     }
@@ -240,7 +278,8 @@ public final class SpeedTestViewModel {
                     return
                 }
 
-                self.lastResult = result
+                self.history = self.historyStore.append(result)
+                self.lastResult = self.history.last
                 self.userFacingError = nil
             } catch let error as NetworkQualityError {
                 if error != .cancelled {
@@ -283,11 +322,17 @@ public final class SpeedTestViewModel {
     }
 
     private func finishRun() {
+        let wasRunning = isRunning
+
         isRunning = false
         startedAt = nil
         testTask = nil
         timerTask?.cancel()
         timerTask = nil
+
+        if wasRunning {
+            onRunFinished?()
+        }
     }
 }
 

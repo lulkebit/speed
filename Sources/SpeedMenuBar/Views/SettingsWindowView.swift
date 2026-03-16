@@ -56,8 +56,51 @@ struct SettingsWindowView: View {
                     Text(appController.automaticTestingFootnote)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
+
+                    Toggle(
+                        strings.automaticTestOnNetworkChangeTitle,
+                        isOn: $appController.automaticallyTestsOnNetworkChange
+                    )
+
+                    Text(strings.automaticTestOnNetworkChangeDescription)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 } header: {
                     Text(strings.settingsSectionAutomaticTests)
+                }
+
+                Section {
+                    Picker(
+                        strings.menuBarDisplayModeLabel,
+                        selection: $appController.menuBarDisplayMode
+                    ) {
+                        ForEach(MenuBarDisplayMode.allCases) { displayMode in
+                            Text(displayMode.title(using: strings))
+                                .tag(displayMode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    HStack(spacing: 12) {
+                        Text(strings.menuBarPreviewLabel)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+
+                        Spacer(minLength: 12)
+
+                        menuBarPreview
+                    }
+                } header: {
+                    Text(strings.settingsSectionMenuBar)
+                }
+
+                Section {
+                    HistorySectionView(
+                        viewModel: appController.speedTestViewModel,
+                        localization: appController.localization
+                    )
+                } header: {
+                    Text(strings.settingsSectionHistory)
                 }
 
                 Section {
@@ -117,7 +160,7 @@ struct SettingsWindowView: View {
             Spacer()
         }
         .padding(24)
-        .frame(minWidth: 560, minHeight: 448)
+        .frame(minWidth: 680, minHeight: 760)
         .background(WindowTitleUpdater(title: strings.settingsTitle))
         .environment(\.locale, appController.localization.locale)
     }
@@ -280,6 +323,33 @@ struct SettingsWindowView: View {
         case .error:
             .red
         }
+    }
+
+    private var menuBarPreview: some View {
+        HStack(spacing: 6) {
+            Image(systemName: appController.speedTestViewModel.menuBarSymbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            if let menuBarText = appController.speedTestViewModel.menuBarText(
+                for: appController.menuBarDisplayMode
+            ) {
+                Text(menuBarText)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        )
     }
 
 }

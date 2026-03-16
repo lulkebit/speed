@@ -88,6 +88,26 @@ public struct SpeedStrings: Sendable {
     public var launchAtLoginToggleTitle: String { catalog.launchAtLoginToggleTitle }
     public var settingsSectionAutomaticTests: String { catalog.settingsSectionAutomaticTests }
     public var automaticTestIntervalLabel: String { catalog.automaticTestIntervalLabel }
+    public var automaticTestOnNetworkChangeTitle: String {
+        catalog.automaticTestOnNetworkChangeTitle
+    }
+    public var automaticTestOnNetworkChangeDescription: String {
+        catalog.automaticTestOnNetworkChangeDescription
+    }
+    public var settingsSectionMenuBar: String { catalog.settingsSectionMenuBar }
+    public var menuBarDisplayModeLabel: String { catalog.menuBarDisplayModeLabel }
+    public var menuBarPreviewLabel: String { catalog.menuBarPreviewLabel }
+    public var settingsSectionHistory: String { catalog.settingsSectionHistory }
+    public var historyRangeLabel: String { catalog.historyRangeLabel }
+    public var historyEmptyTitle: String { catalog.historyEmptyTitle }
+    public var historyEmptyDescription: String { catalog.historyEmptyDescription }
+    public var historyChartThroughputTitle: String { catalog.historyChartThroughputTitle }
+    public var historyChartLatencyTitle: String { catalog.historyChartLatencyTitle }
+    public var historyRecentMeasurementsTitle: String { catalog.historyRecentMeasurementsTitle }
+    public var historyLegendDownload: String { catalog.historyLegendDownload }
+    public var historyLegendUpload: String { catalog.historyLegendUpload }
+    public var historyLegendLatency: String { catalog.historyLegendLatency }
+    public var historyLegendResponsiveness: String { catalog.historyLegendResponsiveness }
     public var settingsSectionUpdates: String { catalog.settingsSectionUpdates }
     public var updateAutomaticChecksToggleTitle: String { catalog.updateAutomaticChecksToggleTitle }
     public var updateCheckButtonTitle: String { catalog.updateCheckButtonTitle }
@@ -182,6 +202,18 @@ public struct SpeedStrings: Sendable {
         catalog.autoTestIntervalDetail(interval)
     }
 
+    public func menuBarDisplayModeTitle(_ displayMode: MenuBarDisplayMode) -> String {
+        catalog.menuBarDisplayModeTitle(displayMode)
+    }
+
+    public func historyTimeRangeTitle(_ range: HistoryTimeRange) -> String {
+        catalog.historyTimeRangeTitle(range)
+    }
+
+    public func historyMeasurementsDescription(count: Int) -> String {
+        catalog.historyMeasurementsDescription(count: count)
+    }
+
     public func statusLastMeasured(profileTitle: String, relative: String) -> String {
         catalog.statusLastMeasured(profileTitle: profileTitle, relative: relative)
     }
@@ -258,6 +290,22 @@ private protocol SpeedStringCatalog: Sendable {
     var launchAtLoginToggleTitle: String { get }
     var settingsSectionAutomaticTests: String { get }
     var automaticTestIntervalLabel: String { get }
+    var automaticTestOnNetworkChangeTitle: String { get }
+    var automaticTestOnNetworkChangeDescription: String { get }
+    var settingsSectionMenuBar: String { get }
+    var menuBarDisplayModeLabel: String { get }
+    var menuBarPreviewLabel: String { get }
+    var settingsSectionHistory: String { get }
+    var historyRangeLabel: String { get }
+    var historyEmptyTitle: String { get }
+    var historyEmptyDescription: String { get }
+    var historyChartThroughputTitle: String { get }
+    var historyChartLatencyTitle: String { get }
+    var historyRecentMeasurementsTitle: String { get }
+    var historyLegendDownload: String { get }
+    var historyLegendUpload: String { get }
+    var historyLegendLatency: String { get }
+    var historyLegendResponsiveness: String { get }
     var settingsSectionUpdates: String { get }
     var updateAutomaticChecksToggleTitle: String { get }
     var updateCheckButtonTitle: String { get }
@@ -323,6 +371,9 @@ private protocol SpeedStringCatalog: Sendable {
     func autoTestIntervalTitle(_ interval: AutoTestInterval) -> String
     func autoTestIntervalShortTitle(_ interval: AutoTestInterval) -> String
     func autoTestIntervalDetail(_ interval: AutoTestInterval) -> String
+    func menuBarDisplayModeTitle(_ displayMode: MenuBarDisplayMode) -> String
+    func historyTimeRangeTitle(_ range: HistoryTimeRange) -> String
+    func historyMeasurementsDescription(count: Int) -> String
     func statusLastMeasured(profileTitle: String, relative: String) -> String
     func nextAutomaticTestDescription(relative: String) -> String
     func footerDuration(seconds: Int) -> String
@@ -349,6 +400,22 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
     let launchAtLoginToggleTitle = "Speed bei der Anmeldung starten"
     let settingsSectionAutomaticTests = "Automatische Messungen"
     let automaticTestIntervalLabel = "Intervall"
+    let automaticTestOnNetworkChangeTitle = "Bei Netzwerkwechsel automatisch neu messen"
+    let automaticTestOnNetworkChangeDescription = "Startet nach einem erkannten Wechsel des aktiven Netzwerks automatisch einen neuen Speedtest."
+    let settingsSectionMenuBar = "Menüleiste"
+    let menuBarDisplayModeLabel = "Anzeige in der Menüleiste"
+    let menuBarPreviewLabel = "Vorschau"
+    let settingsSectionHistory = "Verlauf"
+    let historyRangeLabel = "Zeitraum"
+    let historyEmptyTitle = "Noch kein Verlauf vorhanden"
+    let historyEmptyDescription = "Sobald Messungen vorliegen, erscheinen hier Diagramme für Download, Upload und Latenz."
+    let historyChartThroughputTitle = "Durchsatz"
+    let historyChartLatencyTitle = "Latenz"
+    let historyRecentMeasurementsTitle = "Letzte Messungen"
+    let historyLegendDownload = "Download"
+    let historyLegendUpload = "Upload"
+    let historyLegendLatency = "Ping"
+    let historyLegendResponsiveness = "Reaktion"
     let settingsSectionUpdates = "Updates"
     let updateAutomaticChecksToggleTitle = "Automatisch nach Updates suchen"
     let updateCheckButtonTitle = "Jetzt nach Updates suchen"
@@ -508,6 +575,34 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
         }
     }
 
+    func menuBarDisplayModeTitle(_ displayMode: MenuBarDisplayMode) -> String {
+        switch displayMode {
+        case .icon:
+            "Nur Symbol"
+        case .download:
+            "Downloadwert"
+        case .latency:
+            "Ping"
+        case .downloadAndUpload:
+            "Download und Upload"
+        }
+    }
+
+    func historyTimeRangeTitle(_ range: HistoryTimeRange) -> String {
+        switch range {
+        case .day:
+            "24 Std."
+        case .week:
+            "7 Tage"
+        case .month:
+            "30 Tage"
+        }
+    }
+
+    func historyMeasurementsDescription(count: Int) -> String {
+        "Zeigt \(count) Messungen im ausgewählten Zeitraum."
+    }
+
     func statusLastMeasured(profileTitle: String, relative: String) -> String {
         "\(profileTitle) • zuletzt \(relative)"
     }
@@ -635,6 +730,22 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
     let launchAtLoginToggleTitle = "Launch Speed when logging in"
     let settingsSectionAutomaticTests = "Automatic tests"
     let automaticTestIntervalLabel = "Interval"
+    let automaticTestOnNetworkChangeTitle = "Run a fresh test after network changes"
+    let automaticTestOnNetworkChangeDescription = "Automatically starts a new speed test after macOS reports that the active network changed."
+    let settingsSectionMenuBar = "Menu bar"
+    let menuBarDisplayModeLabel = "Menu bar detail"
+    let menuBarPreviewLabel = "Preview"
+    let settingsSectionHistory = "History"
+    let historyRangeLabel = "Range"
+    let historyEmptyTitle = "No history yet"
+    let historyEmptyDescription = "Charts for download, upload, and latency will appear here as soon as measurements are available."
+    let historyChartThroughputTitle = "Throughput"
+    let historyChartLatencyTitle = "Latency"
+    let historyRecentMeasurementsTitle = "Recent measurements"
+    let historyLegendDownload = "Download"
+    let historyLegendUpload = "Upload"
+    let historyLegendLatency = "Ping"
+    let historyLegendResponsiveness = "Responsiveness"
     let settingsSectionUpdates = "Updates"
     let updateAutomaticChecksToggleTitle = "Automatically check for updates"
     let updateCheckButtonTitle = "Check for updates now"
@@ -792,6 +903,34 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
         case .twoHours:
             "Very lightweight when only broad changes matter."
         }
+    }
+
+    func menuBarDisplayModeTitle(_ displayMode: MenuBarDisplayMode) -> String {
+        switch displayMode {
+        case .icon:
+            "Icon only"
+        case .download:
+            "Download speed"
+        case .latency:
+            "Ping"
+        case .downloadAndUpload:
+            "Download and upload"
+        }
+    }
+
+    func historyTimeRangeTitle(_ range: HistoryTimeRange) -> String {
+        switch range {
+        case .day:
+            "24h"
+        case .week:
+            "7 days"
+        case .month:
+            "30 days"
+        }
+    }
+
+    func historyMeasurementsDescription(count: Int) -> String {
+        "Showing \(count) measurements for the selected range."
     }
 
     func statusLastMeasured(profileTitle: String, relative: String) -> String {

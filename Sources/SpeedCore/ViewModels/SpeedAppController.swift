@@ -18,6 +18,20 @@ public final class SpeedAppController {
         }
     }
 
+    public var automaticallyTestsOnNetworkChange: Bool {
+        didSet {
+            guard automaticallyTestsOnNetworkChange != oldValue else {
+                return
+            }
+
+            settingsStore.automaticallyTestsOnNetworkChange = automaticallyTestsOnNetworkChange
+
+            if !automaticallyTestsOnNetworkChange {
+                pendingNetworkChangeRetest = false
+            }
+        }
+    }
+
     public var automaticallyChecksForUpdates: Bool {
         didSet {
             guard automaticallyChecksForUpdates != oldValue else {
@@ -36,6 +50,16 @@ public final class SpeedAppController {
                     appUpdateStatus = .automaticChecksDisabled
                 }
             }
+        }
+    }
+
+    public var menuBarDisplayMode: MenuBarDisplayMode {
+        didSet {
+            guard menuBarDisplayMode != oldValue else {
+                return
+            }
+
+            settingsStore.menuBarDisplayMode = menuBarDisplayMode
         }
     }
 
@@ -66,6 +90,9 @@ public final class SpeedAppController {
     private let appUpdater: any AppUpdateManaging
 
     @ObservationIgnored
+    private let networkChangeMonitor: any NetworkChangeMonitoring
+
+    @ObservationIgnored
     private let applicationTerminator: @Sendable () -> Void
 
     @ObservationIgnored
@@ -74,31 +101,50 @@ public final class SpeedAppController {
     @ObservationIgnored
     private var automaticUpdateCheckTask: Task<Void, Never>?
 
+    @ObservationIgnored
+    private var pendingNetworkChangeRetest = false
+
+    @ObservationIgnored
+    private var lastNetworkTriggeredTestAt: Date?
+
     public init(
         speedTestViewModel: SpeedTestViewModel? = nil,
         settingsStore: SpeedSettingsStore = SpeedSettingsStore(),
         launchAtLoginManager: LaunchAtLoginManager = LaunchAtLoginManager(),
         localization: SpeedLocalization? = nil,
         appUpdater: any AppUpdateManaging = GitHubReleaseUpdater(),
+        networkChangeMonitor: any NetworkChangeMonitoring = NetworkChangeMonitor(),
         applicationTerminator: @escaping @Sendable () -> Void = {
             exit(EXIT_SUCCESS)
         }
     ) {
         let localization = localization ?? SpeedLocalization(settingsStore: settingsStore)
+        let speedTestViewModel = speedTestViewModel ?? SpeedTestViewModel(localization: localization)
 
         self.localization = localization
-        self.speedTestViewModel = speedTestViewModel ?? SpeedTestViewModel(localization: localization)
+        self.speedTestViewModel = speedTestViewModel
         self.settingsStore = settingsStore
         self.launchAtLoginManager = launchAtLoginManager
         self.appUpdater = appUpdater
+        self.networkChangeMonitor = networkChangeMonitor
         self.applicationTerminator = applicationTerminator
         self.automaticTestInterval = settingsStore.automaticTestInterval
+        self.automaticallyTestsOnNetworkChange = settingsStore.automaticallyTestsOnNetworkChange
         self.automaticallyChecksForUpdates = settingsStore.automaticallyChecksForUpdates
+        self.menuBarDisplayMode = settingsStore.menuBarDisplayMode
         self.launchAtLoginState = launchAtLoginManager.currentState()
         self.appUpdateStatus = settingsStore.automaticallyChecksForUpdates ? .idle : .automaticChecksDisabled
 
+        self.speedTestViewModel.onRunFinished = { [weak self] in
+            self?.handleSpeedTestFinished()
+        }
+        self.networkChangeMonitor.onNetworkChange = { [weak self] in
+            self?.handleObservedNetworkChange()
+        }
+
         rescheduleAutomaticTests()
         scheduleAutomaticUpdateCheck()
+        self.networkChangeMonitor.start()
     }
 
     deinit {
@@ -467,6 +513,47 @@ public final class SpeedAppController {
             appUpdateStatus = .failed(.raw(error.localizedDescription))
             lastUpdateCheckAt = Date()
         }
+    }
+
+    private func handleObservedNetworkChange() {
+        guard automaticallyTestsOnNetworkChange else {
+            return
+        }
+
+        if speedTestViewModel.isRunning {
+            pendingNetworkChangeRetest = true
+            return
+        }
+
+        guard canTriggerNetworkChangeTest else {
+            return
+        }
+
+        lastNetworkTriggeredTestAt = Date()
+        speedTestViewModel.start()
+    }
+
+    private func handleSpeedTestFinished() {
+        guard pendingNetworkChangeRetest, automaticallyTestsOnNetworkChange else {
+            return
+        }
+
+        pendingNetworkChangeRetest = false
+
+        guard canTriggerNetworkChangeTest else {
+            return
+        }
+
+        lastNetworkTriggeredTestAt = Date()
+        speedTestViewModel.start()
+    }
+
+    private var canTriggerNetworkChangeTest: Bool {
+        guard let lastNetworkTriggeredTestAt else {
+            return true
+        }
+
+        return Date().timeIntervalSince(lastNetworkTriggeredTestAt) >= 12
     }
 }
 

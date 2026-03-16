@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SpeedTestResult: Equatable, Sendable {
+public struct SpeedTestResult: Codable, Equatable, Identifiable, Sendable {
     public let downloadMbps: Double
     public let uploadMbps: Double
     public let idleLatencyMs: Double
@@ -28,6 +28,10 @@ public struct SpeedTestResult: Equatable, Sendable {
         self.interfaceName = interfaceName
         self.serverName = serverName
         self.measuredAt = measuredAt
+    }
+
+    public var id: Date {
+        measuredAt
     }
 
     public var worstResponsivenessMs: Double {

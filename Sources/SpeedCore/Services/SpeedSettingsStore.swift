@@ -5,6 +5,8 @@ public final class SpeedSettingsStore {
         static let automaticTestInterval = "automaticTestInterval"
         static let appLanguage = "appLanguage"
         static let automaticallyChecksForUpdates = "automaticallyChecksForUpdates"
+        static let automaticallyTestsOnNetworkChange = "automaticallyTestsOnNetworkChange"
+        static let menuBarDisplayMode = "menuBarDisplayMode"
     }
 
     private let userDefaults: UserDefaults
@@ -46,6 +48,32 @@ public final class SpeedSettingsStore {
         }
         set {
             userDefaults.set(newValue, forKey: Key.automaticallyChecksForUpdates)
+        }
+    }
+
+    public var automaticallyTestsOnNetworkChange: Bool {
+        get {
+            guard userDefaults.object(forKey: Key.automaticallyTestsOnNetworkChange) != nil else {
+                return true
+            }
+
+            return userDefaults.bool(forKey: Key.automaticallyTestsOnNetworkChange)
+        }
+        set {
+            userDefaults.set(newValue, forKey: Key.automaticallyTestsOnNetworkChange)
+        }
+    }
+
+    public var menuBarDisplayMode: MenuBarDisplayMode {
+        get {
+            guard let rawValue = userDefaults.string(forKey: Key.menuBarDisplayMode) else {
+                return .icon
+            }
+
+            return MenuBarDisplayMode(rawValue: rawValue) ?? .icon
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Key.menuBarDisplayMode)
         }
     }
 }
