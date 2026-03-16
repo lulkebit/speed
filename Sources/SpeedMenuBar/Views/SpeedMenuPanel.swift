@@ -29,11 +29,11 @@ struct SpeedMenuPanel: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(localization.strings.appName)
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(SpeedChrome.textPrimary)
 
                 Text(viewModel.statusLine)
                     .font(.system(size: 12.5, weight: .regular))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(SpeedChrome.textSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -44,7 +44,7 @@ struct SpeedMenuPanel: View {
                 if let lastMeasuredClock = viewModel.lastMeasuredClock, viewModel.lastResult != nil {
                     Text(lastMeasuredClock)
                         .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(SpeedChrome.textSecondary)
                         .glassPill()
                 }
 
@@ -53,7 +53,7 @@ struct SpeedMenuPanel: View {
                 } label: {
                     Image(systemName: "gearshape")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(SpeedChrome.textSecondary)
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
@@ -76,7 +76,7 @@ struct SpeedMenuPanel: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(summaryEyebrow)
                         .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(SpeedChrome.textTertiary)
                         .tracking(0.8)
 
                     summaryHeadline
@@ -95,7 +95,7 @@ struct SpeedMenuPanel: View {
 
             Text(viewModel.heroDescription)
                 .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(SpeedChrome.textSecondary)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -131,10 +131,13 @@ struct SpeedMenuPanel: View {
             if let summaryBadgeDetail {
                 Text(summaryBadgeDetail)
                     .foregroundStyle(summaryBadgeDetailColor)
+                    .lineLimit(1)
+                    .monospacedDigit()
             }
         }
         .font(.system(size: 11.5, weight: .semibold))
         .foregroundStyle(summaryBadgeColor)
+        .fixedSize(horizontal: true, vertical: false)
         .glassPill()
     }
 
@@ -182,7 +185,7 @@ struct SpeedMenuPanel: View {
 
                     Text(viewModel.serverLabel)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(SpeedChrome.textTertiary)
                         .lineLimit(1)
                 }
 
@@ -192,10 +195,10 @@ struct SpeedMenuPanel: View {
                     NSApplication.shared.terminate(nil)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(SpeedChrome.textSecondary)
             }
             .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(SpeedChrome.textSecondary)
         }
     }
 
@@ -206,18 +209,18 @@ struct SpeedMenuPanel: View {
                 Text(viewModel.downloadValue)
                     .font(.system(size: 46, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(SpeedChrome.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Text("Mbps")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(SpeedChrome.textSecondary)
             }
         } else {
             Text(viewModel.heroTitle)
                 .font(.system(size: 29, weight: .semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(SpeedChrome.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -278,11 +281,15 @@ struct SpeedMenuPanel: View {
             return .orange
         }
 
-        return .secondary
+        return SpeedChrome.textSecondary
     }
 
     private var summaryBadgeDetailColor: Color {
-        summaryBadgeColor.opacity(0.78)
+        if viewModel.isRunning || viewModel.errorMessage != nil {
+            return summaryBadgeColor.opacity(0.78)
+        }
+
+        return SpeedChrome.textTertiary
     }
 
     private var primaryActionButton: some View {
@@ -353,20 +360,20 @@ struct SpeedMenuPanel: View {
         VStack(alignment: alignment, spacing: 4) {
             Text(title)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(SpeedChrome.textTertiary)
 
             HStack(alignment: .lastTextBaseline, spacing: 4) {
                 Text(value)
                     .font(.system(size: unit == nil ? 18 : 22, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(SpeedChrome.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 if let unit {
                     Text(unit)
                         .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(SpeedChrome.textSecondary)
                 }
             }
             .frame(

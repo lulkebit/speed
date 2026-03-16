@@ -20,18 +20,18 @@ struct MetricRowView: View {
 
                 Image(systemName: icon)
                     .font(.system(size: 11.5, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(SpeedChrome.textSecondary)
             }
             .padding(.leading, 2)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(SpeedChrome.textPrimary)
 
                 Text(note)
                     .font(.system(size: 11.5, weight: .regular))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(SpeedChrome.textTertiary)
                     .lineLimit(1)
             }
 
@@ -41,7 +41,7 @@ struct MetricRowView: View {
                 Text(value)
                     .font(.system(size: unit.isEmpty ? 16 : 22, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(SpeedChrome.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
                     .multilineTextAlignment(.trailing)
@@ -49,7 +49,7 @@ struct MetricRowView: View {
                 if !unit.isEmpty {
                     Text(unit)
                         .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(SpeedChrome.textSecondary)
                 }
             }
             .frame(minWidth: 78, alignment: .trailing)
@@ -94,6 +94,9 @@ enum SpeedChrome {
     static let divider = Color.white.opacity(0.11)
     static let iconFill = Color.white.opacity(0.09)
     static let iconStroke = Color.white.opacity(0.08)
+    static let textPrimary = Color.white.opacity(0.97)
+    static let textSecondary = Color.white.opacity(0.84)
+    static let textTertiary = Color.white.opacity(0.68)
 }
 
 struct GlassPill: ViewModifier {
