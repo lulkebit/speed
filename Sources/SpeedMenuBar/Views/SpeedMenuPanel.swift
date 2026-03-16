@@ -10,158 +10,199 @@ struct SpeedMenuPanel: View {
 
     var body: some View {
         ZStack {
-            FrostedBackground()
+            PanelBackground()
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 0) {
                 header
-                summarySurface
-                metricsSurface
+
+                SubtleDivider()
+                    .padding(.vertical, 16)
+
+                hero
+
+                if shouldShowCompactHistory {
+                    SubtleDivider()
+                        .padding(.vertical, 16)
+
+                    CompactHistoryChartsView(
+                        results: viewModel.history,
+                        localization: localization
+                    )
+                }
+
+                SubtleDivider()
+                    .padding(.vertical, 16)
+
+                metrics
+
+                SubtleDivider()
+                    .padding(.vertical, 16)
+
                 footer
             }
             .padding(18)
         }
         .clipShape(RoundedRectangle(cornerRadius: SpeedChrome.panelCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: SpeedChrome.panelCornerRadius, style: .continuous)
+                .stroke(SpeedChrome.stroke, lineWidth: 0.8)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 18, y: 10)
         .environment(\.locale, localization.locale)
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(localization.strings.appName)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(SpeedChrome.textPrimary)
+        HStack(alignment: .center, spacing: 12) {
+            HStack(spacing: 8) {
+                SubtleBadge(
+                    title: headerStateTitle,
+                    symbol: headerStateSymbol,
+                    tint: headerStateTint
+                )
 
-                Text(viewModel.statusLine)
-                    .font(.system(size: 12.5, weight: .regular))
-                    .foregroundStyle(SpeedChrome.textSecondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let headerDetail {
+                    Text(headerDetail)
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(SpeedChrome.textTertiary)
+                        .monospacedDigit()
+                }
             }
 
             Spacer(minLength: 12)
 
-            VStack(alignment: .trailing, spacing: 8) {
-                if let lastMeasuredClock = viewModel.lastMeasuredClock, viewModel.lastResult != nil {
-                    Text(lastMeasuredClock)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(SpeedChrome.textSecondary)
-                        .glassPill()
-                }
+            Button(action: onOpenSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textSecondary)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(SpeedChrome.softFill)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(SpeedChrome.stroke, lineWidth: 0.8)
+                    )
+            }
+            .buttonStyle(.plain)
+            .subtleHover(cornerRadius: 10)
+            .help(localization.strings.settingsHelp)
+        }
+    }
 
-                Button {
-                    onOpenSettings()
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 13, weight: .medium))
+    @ViewBuilder
+    private var hero: some View {
+        if viewModel.isRunning {
+            runningHero
+        } else if viewModel.errorMessage != nil {
+            messageHero(title: viewModel.heroTitle, detail: viewModel.statusLine)
+        } else if viewModel.lastResult != nil {
+            measuredHero
+        } else {
+            messageHero(title: viewModel.heroTitle, detail: viewModel.statusLine)
+        }
+    }
+
+    private var measuredHero: some View {
+        HStack(alignment: .top, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(localization.strings.summaryDownloadLabel.uppercased(with: localization.locale))
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textTertiary)
+                    .tracking(0.8)
+
+                HStack(alignment: .lastTextBaseline, spacing: 6) {
+                    Text(viewModel.downloadValue)
+                        .font(.system(size: 44, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(SpeedChrome.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Text("Mbps")
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(SpeedChrome.textSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(.thinMaterial)
-                        )
-                        .overlay(
-                            Circle()
-                                .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.8)
-                        )
                 }
-                .buttonStyle(.plain)
-                .help(localization.strings.settingsHelp)
+            }
+
+            Spacer(minLength: 12)
+
+            VStack(alignment: .trailing, spacing: 14) {
+                heroStat(
+                    title: localization.strings.uploadLabel,
+                    value: viewModel.uploadValue,
+                    unit: "Mbps"
+                )
+
+                heroStat(
+                    title: localization.strings.metricPingTitle,
+                    value: viewModel.idleLatencyValue,
+                    unit: "ms"
+                )
             }
         }
     }
 
-    private var summarySurface: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(summaryEyebrow)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(SpeedChrome.textTertiary)
-                        .tracking(0.8)
+    private var runningHero: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .lastTextBaseline, spacing: 6) {
+                Text("\(viewModel.elapsedSeconds)")
+                    .font(.system(size: 40, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(SpeedChrome.textPrimary)
 
-                    summaryHeadline
-                }
-
-                Spacer(minLength: 12)
-
-                summaryBadge
+                Text("s")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textSecondary)
             }
 
             if let progress = viewModel.estimatedProgress {
                 ProgressView(value: progress)
-                    .tint(SpeedChrome.brand.opacity(0.85))
+                    .progressViewStyle(.linear)
+                    .tint(SpeedChrome.brand)
                     .controlSize(.small)
             }
 
-            Text(viewModel.heroDescription)
-                .font(.system(size: 13, weight: .regular))
+            Text(viewModel.statusLine)
+                .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(SpeedChrome.textSecondary)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            GlassDivider()
-
-            HStack(spacing: 16) {
-                summaryMetric(
-                    title: localization.strings.uploadLabel,
-                    value: viewModel.uploadValue,
-                    unit: "Mbps",
-                    alignment: .leading
-                )
-
-                summaryMetric(
-                    title: localization.strings.profileLabel,
-                    value: viewModel.qualityValue,
-                    alignment: .trailing
-                )
-            }
+                .lineLimit(2)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSection(prominence: .prominent)
     }
 
-    private var summaryBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: summaryBadgeSymbol)
+    private func messageHero(title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(SpeedChrome.textPrimary)
+                .lineLimit(2)
 
-            Text(summaryBadgeTitle)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-
-            if let summaryBadgeDetail {
-                Text(summaryBadgeDetail)
-                    .foregroundStyle(summaryBadgeDetailColor)
-                    .lineLimit(1)
-                    .monospacedDigit()
-            }
+            Text(detail)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundStyle(SpeedChrome.textSecondary)
+                .lineLimit(2)
         }
-        .font(.system(size: 11.5, weight: .semibold))
-        .foregroundStyle(summaryBadgeColor)
-        .fixedSize(horizontal: true, vertical: false)
-        .glassPill()
     }
 
-    private var metricsSurface: some View {
+    private var metrics: some View {
         VStack(spacing: 0) {
             MetricRowView(
                 title: localization.strings.metricPingTitle,
                 value: viewModel.idleLatencyValue,
                 unit: "ms",
-                icon: "timer",
-                note: localization.strings.metricPingNote
+                icon: "timer"
             )
 
-            GlassDivider()
+            SubtleDivider()
 
             MetricRowView(
                 title: localization.strings.metricResponsivenessTitle,
                 value: viewModel.responsivenessValue,
                 unit: "ms",
-                icon: "bolt.badge.clock",
-                note: localization.strings.metricResponsivenessNote
+                icon: "bolt.badge.clock"
             )
 
-            GlassDivider()
+            SubtleDivider()
 
             MetricRowView(
                 title: localization.strings.metricNetworkTitle,
@@ -171,7 +212,6 @@ struct SpeedMenuPanel: View {
                 note: viewModel.serverLabel
             )
         }
-        .glassSection()
     }
 
     private var footer: some View {
@@ -179,60 +219,89 @@ struct SpeedMenuPanel: View {
             primaryActionButton
 
             HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Label(viewModel.interfaceLabel, systemImage: "wifi")
-                        .lineLimit(1)
+                Text(viewModel.footerCaption)
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(SpeedChrome.textTertiary)
+                    .lineLimit(1)
 
-                    Text(viewModel.serverLabel)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(SpeedChrome.textTertiary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
+                Spacer(minLength: 12)
 
                 Button(localization.strings.quitButtonTitle) {
                     NSApplication.shared.terminate(nil)
                 }
                 .buttonStyle(.plain)
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(SpeedChrome.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .subtleHover(cornerRadius: 10)
             }
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(SpeedChrome.textSecondary)
         }
     }
 
-    @ViewBuilder
-    private var summaryHeadline: some View {
-        if viewModel.lastResult != nil {
-            HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text(viewModel.downloadValue)
-                    .font(.system(size: 46, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(SpeedChrome.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+    private var primaryActionButton: some View {
+        let tint = primaryActionColor
 
-                Text("Mbps")
+        return Button(action: viewModel.handlePrimaryAction) {
+            HStack(spacing: 10) {
+                Image(systemName: viewModel.actionSymbol)
                     .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(tint)
+
+                Text(viewModel.actionTitle)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textPrimary)
+
+                Spacer()
+
+                Image(systemName: viewModel.isRunning ? "stop.fill" : "arrow.right")
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(SpeedChrome.textSecondary)
             }
-        } else {
-            Text(viewModel.heroTitle)
-                .font(.system(size: 29, weight: .semibold))
-                .foregroundStyle(SpeedChrome.textPrimary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(tint.opacity(0.10))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(tint.opacity(0.18), lineWidth: 0.8)
+            )
         }
+        .buttonStyle(.plain)
+        .subtleHover(
+            cornerRadius: 14,
+            fill: tint.opacity(0.14),
+            stroke: tint.opacity(0.22)
+        )
     }
 
-    private var summaryEyebrow: String {
-        viewModel.lastResult != nil
-            ? localization.strings.summaryDownloadLabel.uppercased(with: localization.locale)
-            : localization.strings.summaryStatusLabel.uppercased(with: localization.locale)
+    private func heroStat(title: String, value: String, unit: String) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Text(title)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(SpeedChrome.textTertiary)
+
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 18, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(SpeedChrome.textPrimary)
+
+                Text(unit)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textSecondary)
+            }
+        }
+        .multilineTextAlignment(.trailing)
     }
 
-    private var summaryBadgeTitle: String {
+    private var shouldShowCompactHistory: Bool {
+        viewModel.history.count >= 2
+    }
+
+    private var headerStateTitle: String {
         if viewModel.isRunning {
             return localization.strings.summaryBadgeLive
         }
@@ -248,15 +317,7 @@ struct SpeedMenuPanel: View {
         return localization.strings.summaryReadyTitle
     }
 
-    private var summaryBadgeDetail: String? {
-        if viewModel.isRunning {
-            return "\(viewModel.elapsedSeconds)s"
-        }
-
-        return viewModel.lastMeasuredClock
-    }
-
-    private var summaryBadgeSymbol: String {
+    private var headerStateSymbol: String {
         if viewModel.isRunning {
             return "waveform.path.ecg"
         }
@@ -272,7 +333,7 @@ struct SpeedMenuPanel: View {
         return "checkmark.circle.fill"
     }
 
-    private var summaryBadgeColor: Color {
+    private var headerStateTint: Color {
         if viewModel.isRunning {
             return SpeedChrome.brand
         }
@@ -284,107 +345,15 @@ struct SpeedMenuPanel: View {
         return SpeedChrome.textSecondary
     }
 
-    private var summaryBadgeDetailColor: Color {
-        if viewModel.isRunning || viewModel.errorMessage != nil {
-            return summaryBadgeColor.opacity(0.78)
+    private var headerDetail: String? {
+        if viewModel.isRunning {
+            return "\(viewModel.elapsedSeconds)s"
         }
 
-        return SpeedChrome.textTertiary
-    }
-
-    private var primaryActionButton: some View {
-        Button(action: viewModel.handlePrimaryAction) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.16))
-
-                    Image(systemName: viewModel.actionSymbol)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 30, height: 30)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.actionTitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-
-                    Text(viewModel.footerCaption)
-                        .font(.system(size: 11.5, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.82))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Spacer()
-
-                Image(systemName: viewModel.isRunning ? "xmark" : "arrow.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.86))
-            }
-            .padding(.horizontal, 15)
-            .padding(.vertical, 13)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                primaryActionColor.opacity(0.88),
-                                primaryActionColor
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
-            )
-            .shadow(color: primaryActionColor.opacity(0.22), radius: 12, y: 6)
-        }
-        .buttonStyle(.plain)
+        return viewModel.lastMeasuredClock
     }
 
     private var primaryActionColor: Color {
         viewModel.isRunning ? .red : SpeedChrome.brand
-    }
-
-    private func summaryMetric(
-        title: String,
-        value: String,
-        unit: String? = nil,
-        alignment: HorizontalAlignment
-    ) -> some View {
-        VStack(alignment: alignment, spacing: 4) {
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(SpeedChrome.textTertiary)
-
-            HStack(alignment: .lastTextBaseline, spacing: 4) {
-                Text(value)
-                    .font(.system(size: unit == nil ? 18 : 22, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(SpeedChrome.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-
-                if let unit {
-                    Text(unit)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(SpeedChrome.textSecondary)
-                }
-            }
-            .frame(
-                maxWidth: .infinity,
-                alignment: alignment == .leading ? .leading : .trailing
-            )
-        }
-        .frame(
-            maxWidth: .infinity,
-            alignment: alignment == .leading ? .leading : .trailing
-        )
-        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
     }
 }

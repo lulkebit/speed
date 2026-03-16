@@ -29,29 +29,50 @@ struct HistorySectionView: View {
     }
 
     private var recentMeasurements: [SpeedTestResult] {
-        Array(filteredHistory.suffix(5).reversed())
+        Array(filteredHistory.suffix(4).reversed())
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Picker(strings.historyRangeLabel, selection: $selectedRange) {
-                ForEach(HistoryTimeRange.allCases) { range in
-                    Text(range.title(using: strings))
-                        .tag(range)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 16) {
+                Picker(strings.historyRangeLabel, selection: $selectedRange) {
+                    ForEach(HistoryTimeRange.allCases) { range in
+                        Text(range.title(using: strings))
+                            .tag(range)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if !filteredHistory.isEmpty {
+                    Text(strings.historyMeasurementsDescription(count: filteredHistory.count))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(SpeedChrome.textTertiary)
+                        .lineLimit(1)
                 }
             }
-            .pickerStyle(.segmented)
-
-            Text(strings.historyMeasurementsDescription(count: filteredHistory.count))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
 
             if filteredHistory.isEmpty {
+                SubtleDivider()
+                    .padding(.vertical, 16)
+
                 emptyState
             } else {
-                throughputChartCard
-                latencyChartCard
-                recentMeasurementsCard
+                SubtleDivider()
+                    .padding(.vertical, 16)
+
+                throughputChartSection
+
+                SubtleDivider()
+                    .padding(.vertical, 16)
+
+                latencyChartSection
+
+                if !recentMeasurements.isEmpty {
+                    SubtleDivider()
+                        .padding(.vertical, 16)
+
+                    recentMeasurementsSection
+                }
             }
         }
         .padding(.vertical, 4)
@@ -64,17 +85,23 @@ struct HistorySectionView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(strings.historyEmptyTitle)
                 .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(SpeedChrome.textPrimary)
 
             Text(strings.historyEmptyDescription)
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(SpeedChrome.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 6)
     }
 
-    private var throughputChartCard: some View {
-        chartCard(title: strings.historyChartThroughputTitle) {
+    private var throughputChartSection: some View {
+        chartSection(
+            title: strings.historyChartThroughputTitle,
+            legends: [
+                HistoryLegendItem(title: strings.historyLegendDownload, color: SpeedChrome.brand),
+                HistoryLegendItem(title: strings.historyLegendUpload, color: .green)
+            ]
+        ) {
             Chart {
                 ForEach(filteredHistory) { result in
                     LineMark(
@@ -82,53 +109,55 @@ struct HistorySectionView: View {
                         y: .value(strings.historyLegendDownload, result.downloadMbps),
                         series: .value("Series", strings.historyLegendDownload)
                     )
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                     .foregroundStyle(SpeedChrome.brand)
 
                     PointMark(
                         x: .value("Time", result.measuredAt),
                         y: .value(strings.historyLegendDownload, result.downloadMbps)
                     )
-                    .symbolSize(22)
-                    .foregroundStyle(SpeedChrome.brand.opacity(0.45))
+                    .symbolSize(14)
+                    .foregroundStyle(SpeedChrome.brand.opacity(0.35))
 
                     LineMark(
                         x: .value("Time", result.measuredAt),
                         y: .value(strings.historyLegendUpload, result.uploadMbps),
                         series: .value("Series", strings.historyLegendUpload)
                     )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(Color.green)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(.green)
 
                     PointMark(
                         x: .value("Time", result.measuredAt),
                         y: .value(strings.historyLegendUpload, result.uploadMbps)
                     )
-                    .symbolSize(22)
-                    .foregroundStyle(Color.green.opacity(0.45))
+                    .symbolSize(14)
+                    .foregroundStyle(Color.green.opacity(0.35))
                 }
 
                 if let selectedMeasurement {
                     RuleMark(x: .value("Selected time", selectedMeasurement.measuredAt))
-                        .foregroundStyle(.white.opacity(0.22))
+                        .foregroundStyle(SpeedChrome.textTertiary.opacity(0.55))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
 
                     PointMark(
                         x: .value("Time", selectedMeasurement.measuredAt),
                         y: .value(strings.historyLegendDownload, selectedMeasurement.downloadMbps)
                     )
-                    .symbolSize(64)
+                    .symbolSize(42)
                     .foregroundStyle(SpeedChrome.brand)
 
                     PointMark(
                         x: .value("Time", selectedMeasurement.measuredAt),
                         y: .value(strings.historyLegendUpload, selectedMeasurement.uploadMbps)
                     )
-                    .symbolSize(64)
-                    .foregroundStyle(Color.green)
+                    .symbolSize(42)
+                    .foregroundStyle(.green)
                 }
             }
-            .chartLegend(position: .top, spacing: 16)
+            .chartLegend(.hidden)
             .chartForegroundStyleScale([
                 strings.historyLegendDownload: SpeedChrome.brand,
                 strings.historyLegendUpload: Color.green
@@ -136,13 +165,21 @@ struct HistorySectionView: View {
             .chartXScale(domain: chartDomain)
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: axisDesiredCount)) {
-                    AxisGridLine()
-                    AxisTick()
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.divider)
+                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.textTertiary)
                     AxisValueLabel(format: selectedRange.axisFormatStyle(locale: localization.locale))
                 }
             }
             .chartYAxis {
-                AxisMarks(position: .leading)
+                AxisMarks(position: .leading) {
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.divider)
+                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.textTertiary)
+                    AxisValueLabel()
+                }
             }
             .chartOverlay { proxy in
                 GeometryReader { geometry in
@@ -151,12 +188,18 @@ struct HistorySectionView: View {
                     }
                 }
             }
-            .frame(height: 170)
+            .frame(height: 154)
         }
     }
 
-    private var latencyChartCard: some View {
-        chartCard(title: strings.historyChartLatencyTitle) {
+    private var latencyChartSection: some View {
+        chartSection(
+            title: strings.historyChartLatencyTitle,
+            legends: [
+                HistoryLegendItem(title: strings.historyLegendLatency, color: .orange),
+                HistoryLegendItem(title: strings.historyLegendResponsiveness, color: .pink)
+            ]
+        ) {
             Chart {
                 ForEach(filteredHistory) { result in
                     LineMark(
@@ -164,43 +207,45 @@ struct HistorySectionView: View {
                         y: .value(strings.historyLegendLatency, result.idleLatencyMs),
                         series: .value("Series", strings.historyLegendLatency)
                     )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(Color.orange)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(.orange)
 
                     PointMark(
                         x: .value("Time", result.measuredAt),
                         y: .value(strings.historyLegendLatency, result.idleLatencyMs)
                     )
-                    .symbolSize(22)
-                    .foregroundStyle(Color.orange.opacity(0.45))
+                    .symbolSize(14)
+                    .foregroundStyle(Color.orange.opacity(0.35))
 
                     LineMark(
                         x: .value("Time", result.measuredAt),
                         y: .value(strings.historyLegendResponsiveness, result.worstResponsivenessMs),
                         series: .value("Series", strings.historyLegendResponsiveness)
                     )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(Color.pink)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(.pink)
 
                     PointMark(
                         x: .value("Time", result.measuredAt),
                         y: .value(strings.historyLegendResponsiveness, result.worstResponsivenessMs)
                     )
-                    .symbolSize(22)
-                    .foregroundStyle(Color.pink.opacity(0.45))
+                    .symbolSize(14)
+                    .foregroundStyle(Color.pink.opacity(0.35))
                 }
 
                 if let selectedMeasurement {
                     RuleMark(x: .value("Selected time", selectedMeasurement.measuredAt))
-                        .foregroundStyle(.white.opacity(0.22))
+                        .foregroundStyle(SpeedChrome.textTertiary.opacity(0.55))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
 
                     PointMark(
                         x: .value("Time", selectedMeasurement.measuredAt),
                         y: .value(strings.historyLegendLatency, selectedMeasurement.idleLatencyMs)
                     )
-                    .symbolSize(64)
-                    .foregroundStyle(Color.orange)
+                    .symbolSize(42)
+                    .foregroundStyle(.orange)
 
                     PointMark(
                         x: .value("Time", selectedMeasurement.measuredAt),
@@ -209,11 +254,11 @@ struct HistorySectionView: View {
                             selectedMeasurement.worstResponsivenessMs
                         )
                     )
-                    .symbolSize(64)
-                    .foregroundStyle(Color.pink)
+                    .symbolSize(42)
+                    .foregroundStyle(.pink)
                 }
             }
-            .chartLegend(position: .top, spacing: 16)
+            .chartLegend(.hidden)
             .chartForegroundStyleScale([
                 strings.historyLegendLatency: Color.orange,
                 strings.historyLegendResponsiveness: Color.pink
@@ -221,13 +266,21 @@ struct HistorySectionView: View {
             .chartXScale(domain: chartDomain)
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: axisDesiredCount)) {
-                    AxisGridLine()
-                    AxisTick()
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.divider)
+                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.textTertiary)
                     AxisValueLabel(format: selectedRange.axisFormatStyle(locale: localization.locale))
                 }
             }
             .chartYAxis {
-                AxisMarks(position: .leading)
+                AxisMarks(position: .leading) {
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.divider)
+                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.textTertiary)
+                    AxisValueLabel()
+                }
             }
             .chartOverlay { proxy in
                 GeometryReader { geometry in
@@ -236,24 +289,26 @@ struct HistorySectionView: View {
                     }
                 }
             }
-            .frame(height: 170)
+            .frame(height: 154)
         }
     }
 
-    private var recentMeasurementsCard: some View {
+    private var recentMeasurementsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(strings.historyRecentMeasurementsTitle)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(SpeedChrome.textPrimary)
 
             ForEach(Array(recentMeasurements.enumerated()), id: \.element.id) { index, result in
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(timestampLabel(for: result.measuredAt))
                             .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SpeedChrome.textPrimary)
 
                         Text(result.interfaceName.uppercased(with: localization.locale))
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(SpeedChrome.textTertiary)
                     }
 
                     Spacer(minLength: 12)
@@ -262,56 +317,59 @@ struct HistorySectionView: View {
                         Text(
                             "\(MetricFormatter.speed(result.downloadMbps, locale: localization.locale))↓  \(MetricFormatter.speed(result.uploadMbps, locale: localization.locale))↑"
                         )
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .monospacedDigit()
+                        .foregroundStyle(SpeedChrome.textPrimary)
 
                         Text(
-                            "\(MetricFormatter.milliseconds(result.idleLatencyMs, locale: localization.locale)) ms • \(MetricFormatter.milliseconds(result.worstResponsivenessMs, locale: localization.locale)) ms"
+                            "\(MetricFormatter.milliseconds(result.idleLatencyMs, locale: localization.locale)) ms  \(MetricFormatter.milliseconds(result.worstResponsivenessMs, locale: localization.locale)) ms"
                         )
-                        .font(.system(size: 11.5, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(SpeedChrome.textSecondary)
                         .monospacedDigit()
                     }
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .subtleHover(cornerRadius: 12)
 
                 if index < recentMeasurements.count - 1 {
-                    Divider()
+                    SubtleDivider()
                 }
             }
         }
-        .padding(14)
-        .background(cardBackground)
-        .overlay(cardBorder)
     }
 
-    private func chartCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
+    private func chartSection<Content: View>(
+        title: String,
+        legends: [HistoryLegendItem],
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 16) {
+                Text(title)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textPrimary)
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 12) {
+                    ForEach(legends) { legend in
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(legend.color)
+                                .frame(width: 7, height: 7)
+
+                            Text(legend.title)
+                                .font(.system(size: 11.5, weight: .medium))
+                                .foregroundStyle(SpeedChrome.textTertiary)
+                        }
+                    }
+                }
+            }
 
             content()
         }
-        .padding(14)
-        .background(cardBackground)
-        .overlay(cardBorder)
-    }
-
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.92))
-    }
-
-    private var cardBorder: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .stroke(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
-    }
-
-    private func timestampLabel(for date: Date) -> String {
-        let style = Date.FormatStyle(
-            date: selectedRange == .hour || selectedRange == .day ? .omitted : .abbreviated,
-            time: .shortened
-        )
-        return date.formatted(style.locale(localization.locale))
     }
 
     private var axisDesiredCount: Int {
@@ -323,6 +381,14 @@ struct HistorySectionView: View {
         case .week, .month:
             5
         }
+    }
+
+    private func timestampLabel(for date: Date) -> String {
+        let style = Date.FormatStyle(
+            date: selectedRange == .hour || selectedRange == .day ? .omitted : .abbreviated,
+            time: .shortened
+        )
+        return date.formatted(style.locale(localization.locale))
     }
 
     @ViewBuilder
@@ -369,23 +435,23 @@ struct HistorySectionView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(timestamp)
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SpeedChrome.textSecondary)
 
             content()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(width: 182, alignment: .leading)
+        .frame(width: 176, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.regularMaterial.opacity(0.96))
+                .fill(Color(nsColor: .windowBackgroundColor))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 0.8)
+                .stroke(SpeedChrome.stroke, lineWidth: 0.8)
         )
-        .shadow(color: .black.opacity(0.16), radius: 10, y: 6)
+        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
     }
 
     private func tooltipValueRow(color: Color, title: String, value: String) -> some View {
@@ -395,15 +461,15 @@ struct HistorySectionView: View {
                 .frame(width: 8, height: 8)
 
             Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundStyle(SpeedChrome.textSecondary)
 
             Spacer(minLength: 8)
 
             Text(value)
-                .font(.system(size: 12.5, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .monospacedDigit()
-                .foregroundStyle(.primary)
+                .foregroundStyle(SpeedChrome.textPrimary)
         }
     }
 
@@ -436,7 +502,7 @@ struct HistorySectionView: View {
                         tooltip()
                             .position(
                                 x: preferredTooltipX(for: pointX, in: plotFrame),
-                                y: plotFrame.minY + 28
+                                y: plotFrame.minY + 24
                             )
                             .allowsHitTesting(false)
                     }
@@ -488,8 +554,8 @@ struct HistorySectionView: View {
     }
 
     private func preferredTooltipX(for pointX: CGFloat, in plotFrame: CGRect) -> CGFloat {
-        let halfWidth: CGFloat = 91
-        let clearance: CGFloat = 28
+        let halfWidth: CGFloat = 88
+        let clearance: CGFloat = 24
 
         if pointX <= plotFrame.midX {
             let tooltipX = pointX + halfWidth + clearance
@@ -513,6 +579,15 @@ struct HistorySectionView: View {
 
     private func exactMilliseconds(_ value: Double) -> String {
         "\(value.formatted(.number.locale(localization.locale).precision(.fractionLength(1)))) ms"
+    }
+}
+
+private struct HistoryLegendItem: Identifiable {
+    let title: String
+    let color: Color
+
+    var id: String {
+        title
     }
 }
 
