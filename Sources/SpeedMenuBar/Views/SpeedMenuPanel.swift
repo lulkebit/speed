@@ -42,12 +42,6 @@ struct SpeedMenuPanel: View {
             }
             .padding(18)
         }
-        .clipShape(RoundedRectangle(cornerRadius: SpeedChrome.panelCornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: SpeedChrome.panelCornerRadius, style: .continuous)
-                .stroke(SpeedChrome.stroke, lineWidth: 0.8)
-        )
-        .shadow(color: .black.opacity(0.10), radius: 18, y: 10)
         .environment(\.locale, localization.locale)
     }
 

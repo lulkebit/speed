@@ -160,7 +160,6 @@ struct SubtleBadge: View {
 
 enum SpeedChrome {
     static let panelWidth: CGFloat = 392
-    static let panelCornerRadius: CGFloat = 24
     static let brand = Color(red: 0.20, green: 0.52, blue: 0.95)
     static let stroke = Color.white.opacity(0.16)
     static let divider = Color.white.opacity(0.10)
