@@ -26,6 +26,7 @@ struct SpeedMenuBarApp: App {
             SpeedMenuPanel(
                 viewModel: appController.speedTestViewModel,
                 localization: appController.localization,
+                nextAutomaticTestAt: appController.nextAutomaticTestAt,
                 onOpenSettings: {
                     SettingsWindowController.shared.show(appController: appController)
                 }

@@ -6,6 +6,7 @@ import SwiftUI
 struct SpeedMenuPanel: View {
     @Bindable var viewModel: SpeedTestViewModel
     let localization: SpeedLocalization
+    let nextAutomaticTestAt: Date?
     let onOpenSettings: () -> Void
 
     var body: some View {
@@ -217,10 +218,14 @@ struct SpeedMenuPanel: View {
             primaryActionButton
 
             HStack(alignment: .center, spacing: 12) {
-                Text(viewModel.footerCaption)
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(SpeedChrome.textTertiary)
-                    .lineLimit(1)
+                if let nextAutomaticTestAt {
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        Text(nextAutomaticTestCaption(for: nextAutomaticTestAt))
+                            .font(.system(size: 11.5, weight: .medium))
+                            .foregroundStyle(SpeedChrome.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
 
                 Spacer(minLength: 12)
 
@@ -353,5 +358,12 @@ struct SpeedMenuPanel: View {
 
     private var primaryActionColor: Color {
         viewModel.isRunning ? .red : SpeedChrome.brand
+    }
+
+    private func nextAutomaticTestCaption(for date: Date) -> String {
+        let strings = localization.strings
+        let relative = MetricFormatter.relativeTimestamp(date, locale: localization.locale)
+            ?? strings.laterHint
+        return strings.nextAutomaticTestDescription(relative: relative)
     }
 }

@@ -196,20 +196,6 @@ public final class SpeedTestViewModel {
         return serverName.replacingOccurrences(of: ".aaplimg.com", with: "")
     }
 
-    public var footerCaption: String {
-        let strings = localization.strings
-
-        if isRunning {
-            return strings.footerDuration(seconds: elapsedSeconds)
-        }
-
-        if let lastMeasuredRelative {
-            return strings.footerLastMeasured(relative: lastMeasuredRelative)
-        }
-
-        return strings.footerDefault
-    }
-
     public var lastMeasuredClock: String? {
         MetricFormatter.clockTimestamp(lastResult?.measuredAt, locale: localization.locale)
     }
