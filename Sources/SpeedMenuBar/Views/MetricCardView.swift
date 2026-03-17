@@ -46,7 +46,10 @@ struct MetricRowView: View {
                             .foregroundStyle(SpeedChrome.textPrimary)
 
                         if let helpText, !helpText.isEmpty {
-                            MetricHelpIcon(isHovered: $isShowingHelpOverlay)
+                            MetricHelpIcon(
+                                helpText: helpText,
+                                isHovered: $isShowingHelpOverlay
+                            )
                         }
                     }
 
@@ -79,22 +82,13 @@ struct MetricRowView: View {
         }
         .padding(.horizontal, 2)
         .padding(.vertical, 10)
-        .overlay(alignment: .topLeading) {
-            if let helpText, !helpText.isEmpty, isShowingHelpOverlay {
-                MetricHelpOverlay(text: helpText)
-                    .offset(x: 68, y: 28)
-                    .transition(
-                        .opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading))
-                    )
-                    .allowsHitTesting(false)
-            }
-        }
         .zIndex(isShowingHelpOverlay ? 20 : 0)
-        .animation(.easeOut(duration: 0.14), value: isShowingHelpOverlay)
     }
 }
 
 private struct MetricHelpIcon: View {
+    let helpText: String
+
     @Binding
     var isHovered: Bool
 
@@ -107,7 +101,19 @@ private struct MetricHelpIcon: View {
                 Circle()
                     .fill(isHovered ? SpeedChrome.softFill.opacity(1.1) : SpeedChrome.softFill.opacity(0.6))
             )
+            .overlay(alignment: .bottomLeading) {
+                if isHovered {
+                    MetricHelpOverlay(text: helpText)
+                        .offset(x: -2, y: -8)
+                        .transition(
+                            .opacity.combined(with: .scale(scale: 0.96, anchor: .bottomLeading))
+                        )
+                        .allowsHitTesting(false)
+                }
+            }
             .contentShape(Rectangle())
+            .zIndex(isHovered ? 10 : 0)
+            .animation(.easeOut(duration: 0.14), value: isHovered)
             .onHover { hovering in
                 isHovered = hovering
             }
@@ -119,18 +125,6 @@ private struct MetricHelpOverlay: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .frame(width: 10, height: 10)
-                .rotationEffect(.degrees(45))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .stroke(SpeedChrome.stroke, lineWidth: 0.8)
-                        .rotationEffect(.degrees(45))
-                )
-                .padding(.leading, 14)
-                .offset(y: 5)
-
             Text(text)
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(SpeedChrome.textPrimary)
@@ -147,6 +141,18 @@ private struct MetricHelpOverlay: View {
                         .stroke(SpeedChrome.stroke, lineWidth: 0.8)
                 )
                 .shadow(color: .black.opacity(0.16), radius: 12, y: 5)
+
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .frame(width: 10, height: 10)
+                .rotationEffect(.degrees(45))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .stroke(SpeedChrome.stroke, lineWidth: 0.8)
+                        .rotationEffect(.degrees(45))
+                )
+                .padding(.leading, 14)
+                .offset(y: -5)
         }
     }
 }
