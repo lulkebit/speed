@@ -55,6 +55,15 @@ struct SpeedMenuPanel: View {
                     tint: headerStateTint
                 )
 
+                if let headerDeltaText = viewModel.downloadDeltaText,
+                   let headerDeltaTrend = viewModel.downloadDeltaTrend {
+                    SubtleBadge(
+                        title: headerDeltaText,
+                        symbol: downloadDeltaSymbol(for: headerDeltaTrend),
+                        tint: downloadDeltaTint(for: headerDeltaTrend)
+                    )
+                }
+
                 if let headerDetail {
                     Text(headerDetail)
                         .font(.system(size: 11.5, weight: .medium))
@@ -298,6 +307,28 @@ struct SpeedMenuPanel: View {
             }
         }
         .multilineTextAlignment(.trailing)
+    }
+
+    private func downloadDeltaSymbol(for trend: MeasurementDeltaTrend) -> String {
+        switch trend {
+        case .up:
+            return "arrow.up.right"
+        case .down:
+            return "arrow.down.right"
+        case .unchanged:
+            return "arrow.left.and.right"
+        }
+    }
+
+    private func downloadDeltaTint(for trend: MeasurementDeltaTrend) -> Color {
+        switch trend {
+        case .up:
+            return .green
+        case .down:
+            return .orange
+        case .unchanged:
+            return SpeedChrome.textSecondary
+        }
     }
 
     private var shouldShowCompactHistory: Bool {

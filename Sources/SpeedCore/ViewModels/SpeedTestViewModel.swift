@@ -1,6 +1,12 @@
 import Foundation
 import Observation
 
+public enum MeasurementDeltaTrend: Equatable, Sendable {
+    case up
+    case down
+    case unchanged
+}
+
 @MainActor
 @Observable
 public final class SpeedTestViewModel {
@@ -196,6 +202,40 @@ public final class SpeedTestViewModel {
         return serverName.replacingOccurrences(of: ".aaplimg.com", with: "")
     }
 
+    public var downloadDeltaTrend: MeasurementDeltaTrend? {
+        guard let delta = normalizedDownloadDeltaMbps else {
+            return nil
+        }
+
+        if delta > 0 {
+            return .up
+        }
+
+        if delta < 0 {
+            return .down
+        }
+
+        return .unchanged
+    }
+
+    public var downloadDeltaText: String? {
+        guard let delta = normalizedDownloadDeltaMbps else {
+            return nil
+        }
+
+        let prefix: String
+        if delta > 0 {
+            prefix = "+"
+        } else if delta < 0 {
+            prefix = "-"
+        } else {
+            prefix = ""
+        }
+
+        let formattedDelta = MetricFormatter.speed(abs(delta), locale: localization.locale)
+        return "\(prefix)\(formattedDelta) Mbps"
+    }
+
     public var lastMeasuredClock: String? {
         MetricFormatter.clockTimestamp(lastResult?.measuredAt, locale: localization.locale)
     }
@@ -283,6 +323,20 @@ public final class SpeedTestViewModel {
 
     private var lastMeasuredRelative: String? {
         MetricFormatter.relativeTimestamp(lastResult?.measuredAt, locale: localization.locale)
+    }
+
+    private var previousResult: SpeedTestResult? {
+        history.dropLast().last
+    }
+
+    private var normalizedDownloadDeltaMbps: Double? {
+        guard let lastResult,
+              let previousResult else {
+            return nil
+        }
+
+        let delta = lastResult.downloadMbps - previousResult.downloadMbps
+        return abs(delta) < 0.05 ? 0 : delta
     }
 
     private func beginTimer() {
