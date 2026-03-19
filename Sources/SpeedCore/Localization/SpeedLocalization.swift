@@ -108,6 +108,14 @@ public struct SpeedStrings: Sendable {
     public var historyLegendUpload: String { catalog.historyLegendUpload }
     public var historyLegendLatency: String { catalog.historyLegendLatency }
     public var historyLegendResponsiveness: String { catalog.historyLegendResponsiveness }
+    public var historyLegendIncidents: String { catalog.historyLegendIncidents }
+    public var historyIssueDurationLabel: String { catalog.historyIssueDurationLabel }
+    public var historyIssueNetworkStatusLabel: String { catalog.historyIssueNetworkStatusLabel }
+    public var historyIssueInterfacesLabel: String { catalog.historyIssueInterfacesLabel }
+    public var historyIssueDetailsLabel: String { catalog.historyIssueDetailsLabel }
+    public var historyIssueCodeLabel: String { catalog.historyIssueCodeLabel }
+    public var historyTooltipInterfaceLabel: String { catalog.historyTooltipInterfaceLabel }
+    public var historyTooltipServerLabel: String { catalog.historyTooltipServerLabel }
     public var settingsSectionUpdates: String { catalog.settingsSectionUpdates }
     public var updateAutomaticChecksToggleTitle: String { catalog.updateAutomaticChecksToggleTitle }
     public var updateCheckButtonTitle: String { catalog.updateCheckButtonTitle }
@@ -191,6 +199,14 @@ public struct SpeedStrings: Sendable {
 
     public func networkProfileDetail(_ profile: NetworkProfile) -> String {
         catalog.networkProfileDetail(profile)
+    }
+
+    public func networkIssueTitle(_ kind: NetworkIssueKind) -> String {
+        catalog.networkIssueTitle(kind)
+    }
+
+    public func networkPathStatusTitle(_ pathStatus: String) -> String {
+        catalog.networkPathStatusTitle(pathStatus)
     }
 
     public func autoTestIntervalTitle(_ interval: AutoTestInterval) -> String {
@@ -309,6 +325,14 @@ private protocol SpeedStringCatalog: Sendable {
     var historyLegendUpload: String { get }
     var historyLegendLatency: String { get }
     var historyLegendResponsiveness: String { get }
+    var historyLegendIncidents: String { get }
+    var historyIssueDurationLabel: String { get }
+    var historyIssueNetworkStatusLabel: String { get }
+    var historyIssueInterfacesLabel: String { get }
+    var historyIssueDetailsLabel: String { get }
+    var historyIssueCodeLabel: String { get }
+    var historyTooltipInterfaceLabel: String { get }
+    var historyTooltipServerLabel: String { get }
     var settingsSectionUpdates: String { get }
     var updateAutomaticChecksToggleTitle: String { get }
     var updateCheckButtonTitle: String { get }
@@ -374,6 +398,8 @@ private protocol SpeedStringCatalog: Sendable {
     func networkProfileTitle(_ profile: NetworkProfile) -> String
     func networkProfileHeadline(_ profile: NetworkProfile) -> String
     func networkProfileDetail(_ profile: NetworkProfile) -> String
+    func networkIssueTitle(_ kind: NetworkIssueKind) -> String
+    func networkPathStatusTitle(_ pathStatus: String) -> String
     func autoTestIntervalTitle(_ interval: AutoTestInterval) -> String
     func autoTestIntervalShortTitle(_ interval: AutoTestInterval) -> String
     func autoTestIntervalDetail(_ interval: AutoTestInterval) -> String
@@ -414,14 +440,22 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
     let settingsSectionHistory = "Verlauf"
     let historyRangeLabel = "Zeitraum"
     let historyEmptyTitle = "Noch kein Verlauf vorhanden"
-    let historyEmptyDescription = "Sobald Messungen vorliegen, erscheinen hier Diagramme für Download, Upload und Latenz."
+    let historyEmptyDescription = "Sobald Messungen oder Verbindungsprobleme vorliegen, erscheinen hier Diagramme und Marker für Download, Upload, Latenz sowie Timeouts oder Ausfälle."
     let historyChartThroughputTitle = "Durchsatz"
     let historyChartLatencyTitle = "Latenz"
-    let historyRecentMeasurementsTitle = "Letzte Messungen"
+    let historyRecentMeasurementsTitle = "Letzte Ereignisse"
     let historyLegendDownload = "Download"
     let historyLegendUpload = "Upload"
     let historyLegendLatency = "Ping"
     let historyLegendResponsiveness = "Reaktion"
+    let historyLegendIncidents = "Vorfälle"
+    let historyIssueDurationLabel = "Dauer"
+    let historyIssueNetworkStatusLabel = "Netzstatus"
+    let historyIssueInterfacesLabel = "Schnittstellen"
+    let historyIssueDetailsLabel = "Hinweis"
+    let historyIssueCodeLabel = "Code"
+    let historyTooltipInterfaceLabel = "Schnittstelle"
+    let historyTooltipServerLabel = "Server"
     let settingsSectionUpdates = "Updates"
     let updateAutomaticChecksToggleTitle = "Automatisch nach Updates suchen"
     let updateCheckButtonTitle = "Jetzt nach Updates suchen"
@@ -533,6 +567,30 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
         }
     }
 
+    func networkIssueTitle(_ kind: NetworkIssueKind) -> String {
+        switch kind {
+        case .timeout:
+            return "Timeout"
+        case .internetUnavailable:
+            return "Internetausfall"
+        case .failure:
+            return "Fehlgeschlagener Test"
+        }
+    }
+
+    func networkPathStatusTitle(_ pathStatus: String) -> String {
+        switch pathStatus {
+        case "satisfied":
+            return "Verbunden"
+        case "requiresConnection":
+            return "Verbindung erforderlich"
+        case "unsatisfied":
+            return "Offline"
+        default:
+            return "Unbekannt"
+        }
+    }
+
     func autoTestIntervalTitle(_ interval: AutoTestInterval) -> String {
         switch interval {
         case .off:
@@ -611,7 +669,7 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
     }
 
     func historyMeasurementsDescription(count: Int) -> String {
-        "Zeigt \(count) Messungen im ausgewählten Zeitraum."
+        "Zeigt \(count) Einträge im ausgewählten Zeitraum."
     }
 
     func statusLastMeasured(profileTitle: String, relative: String) -> String {
@@ -642,17 +700,33 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
             return "Die Ausgabe des Speedtests konnte nicht gelesen werden."
         case .cancelled:
             return "Der Speedtest wurde abgebrochen."
-        case let .executionFailed(message, status):
-            if let message, !message.isEmpty {
+        case .timedOut:
+            return "Der Speedtest hat das Zeitlimit erreicht und wurde als Timeout protokolliert."
+        case .internetUnavailable:
+            return "Während des Tests war keine Internetverbindung verfügbar."
+        case let .executionFailed(context):
+            if let message = context.message, !message.isEmpty {
                 return message
             }
 
-            if let status {
-                return "Der Speedtest wurde mit Status \(status) beendet."
+            if let diagnostic = executionFailureDiagnostic(for: context) {
+                return "Der Speedtest konnte nicht abgeschlossen werden (\(diagnostic))."
             }
 
             return "Der Speedtest konnte nicht abgeschlossen werden."
         }
+    }
+
+    private func executionFailureDiagnostic(for context: NetworkQualityFailureContext) -> String? {
+        if let errorDomain = context.errorDomain, let errorCode = context.errorCode {
+            return "\(errorDomain) \(errorCode)"
+        }
+
+        if let status = context.status {
+            return "Status \(status)"
+        }
+
+        return nil
     }
 
     func launchAtLoginErrorDescription(_ error: LaunchAtLoginError) -> String {
@@ -749,14 +823,22 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
     let settingsSectionHistory = "History"
     let historyRangeLabel = "Range"
     let historyEmptyTitle = "No history yet"
-    let historyEmptyDescription = "Charts for download, upload, and latency will appear here as soon as measurements are available."
+    let historyEmptyDescription = "Charts will appear here as soon as measurements or connection issues are available, including markers for timeouts and outages."
     let historyChartThroughputTitle = "Throughput"
     let historyChartLatencyTitle = "Latency"
-    let historyRecentMeasurementsTitle = "Recent measurements"
+    let historyRecentMeasurementsTitle = "Recent activity"
     let historyLegendDownload = "Download"
     let historyLegendUpload = "Upload"
     let historyLegendLatency = "Ping"
     let historyLegendResponsiveness = "Responsiveness"
+    let historyLegendIncidents = "Incidents"
+    let historyIssueDurationLabel = "Duration"
+    let historyIssueNetworkStatusLabel = "Path status"
+    let historyIssueInterfacesLabel = "Interfaces"
+    let historyIssueDetailsLabel = "Details"
+    let historyIssueCodeLabel = "Code"
+    let historyTooltipInterfaceLabel = "Interface"
+    let historyTooltipServerLabel = "Server"
     let settingsSectionUpdates = "Updates"
     let updateAutomaticChecksToggleTitle = "Automatically check for updates"
     let updateCheckButtonTitle = "Check for updates now"
@@ -868,6 +950,30 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
         }
     }
 
+    func networkIssueTitle(_ kind: NetworkIssueKind) -> String {
+        switch kind {
+        case .timeout:
+            return "Timeout"
+        case .internetUnavailable:
+            return "Internet outage"
+        case .failure:
+            return "Failed test"
+        }
+    }
+
+    func networkPathStatusTitle(_ pathStatus: String) -> String {
+        switch pathStatus {
+        case "satisfied":
+            return "Connected"
+        case "requiresConnection":
+            return "Connection required"
+        case "unsatisfied":
+            return "Offline"
+        default:
+            return "Unknown"
+        }
+    }
+
     func autoTestIntervalTitle(_ interval: AutoTestInterval) -> String {
         switch interval {
         case .off:
@@ -946,7 +1052,7 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
     }
 
     func historyMeasurementsDescription(count: Int) -> String {
-        "Showing \(count) measurements for the selected range."
+        "Showing \(count) entries for the selected range."
     }
 
     func statusLastMeasured(profileTitle: String, relative: String) -> String {
@@ -977,17 +1083,33 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
             return "The speed test output could not be read."
         case .cancelled:
             return "The speed test was cancelled."
-        case let .executionFailed(message, status):
-            if let message, !message.isEmpty {
+        case .timedOut:
+            return "The speed test hit the time limit and was logged as a timeout."
+        case .internetUnavailable:
+            return "The internet connection was unavailable during the speed test."
+        case let .executionFailed(context):
+            if let message = context.message, !message.isEmpty {
                 return message
             }
 
-            if let status {
-                return "The speed test exited with status \(status)."
+            if let diagnostic = executionFailureDiagnostic(for: context) {
+                return "The speed test could not be completed (\(diagnostic))."
             }
 
             return "The speed test could not be completed."
         }
+    }
+
+    private func executionFailureDiagnostic(for context: NetworkQualityFailureContext) -> String? {
+        if let errorDomain = context.errorDomain, let errorCode = context.errorCode {
+            return "\(errorDomain) \(errorCode)"
+        }
+
+        if let status = context.status {
+            return "status \(status)"
+        }
+
+        return nil
     }
 
     func launchAtLoginErrorDescription(_ error: LaunchAtLoginError) -> String {

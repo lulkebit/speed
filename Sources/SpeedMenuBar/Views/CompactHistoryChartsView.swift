@@ -3,15 +3,19 @@ import SpeedCore
 import SwiftUI
 
 struct CompactHistoryChartsView: View {
-    let results: [SpeedTestResult]
+    let entries: [SpeedTestHistoryEntry]
     let localization: SpeedLocalization
 
-    private var recentHistory: [SpeedTestResult] {
-        Array(results.suffix(12))
+    private var recentHistory: [SpeedTestHistoryEntry] {
+        Array(entries.suffix(12))
     }
 
     private var latestMeasurement: SpeedTestResult? {
-        recentHistory.last
+        recentHistory.compactMap(\.result).last
+    }
+
+    private var recentIssues: [NetworkIssueRecord] {
+        recentHistory.compactMap(\.issue)
     }
 
     var body: some View {
@@ -20,19 +24,27 @@ struct CompactHistoryChartsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     CompactTrendSection(
                         points: throughputPoints,
+                        issues: recentIssues,
+                        strings: localization.strings,
+                        locale: localization.locale,
                         primaryColor: SpeedChrome.brand,
                         secondaryColor: .green,
-                        locale: localization.locale,
                         primaryTitle: localization.strings.historyLegendDownload,
                         secondaryTitle: localization.strings.historyLegendUpload,
                         primaryLegend: MiniMetricLegend(
                             symbol: "arrow.down",
-                            value: MetricFormatter.speed(latestMeasurement?.downloadMbps, locale: localization.locale),
+                            value: MetricFormatter.speed(
+                                latestMeasurement?.downloadMbps,
+                                locale: localization.locale
+                            ),
                             tint: SpeedChrome.brand
                         ),
                         secondaryLegend: MiniMetricLegend(
                             symbol: "arrow.up",
-                            value: MetricFormatter.speed(latestMeasurement?.uploadMbps, locale: localization.locale),
+                            value: MetricFormatter.speed(
+                                latestMeasurement?.uploadMbps,
+                                locale: localization.locale
+                            ),
                             tint: .green
                         ),
                         valueFormatter: { value in
@@ -44,14 +56,19 @@ struct CompactHistoryChartsView: View {
 
                     CompactTrendSection(
                         points: latencyPoints,
+                        issues: recentIssues,
+                        strings: localization.strings,
+                        locale: localization.locale,
                         primaryColor: .orange,
                         secondaryColor: .pink,
-                        locale: localization.locale,
                         primaryTitle: localization.strings.historyLegendLatency,
                         secondaryTitle: localization.strings.historyLegendResponsiveness,
                         primaryLegend: MiniMetricLegend(
                             symbol: "timer",
-                            value: MetricFormatter.milliseconds(latestMeasurement?.idleLatencyMs, locale: localization.locale) + " ms",
+                            value: MetricFormatter.milliseconds(
+                                latestMeasurement?.idleLatencyMs,
+                                locale: localization.locale
+                            ) + " ms",
                             tint: .orange
                         ),
                         secondaryLegend: MiniMetricLegend(
@@ -72,7 +89,7 @@ struct CompactHistoryChartsView: View {
     }
 
     private var throughputPoints: [CompactTrendPoint] {
-        recentHistory.map { result in
+        recentHistory.compactMap(\.result).map { result in
             CompactTrendPoint(
                 measuredAt: result.measuredAt,
                 primary: result.downloadMbps,
@@ -82,7 +99,7 @@ struct CompactHistoryChartsView: View {
     }
 
     private var latencyPoints: [CompactTrendPoint] {
-        recentHistory.map { result in
+        recentHistory.compactMap(\.result).map { result in
             CompactTrendPoint(
                 measuredAt: result.measuredAt,
                 primary: result.idleLatencyMs,
@@ -94,9 +111,11 @@ struct CompactHistoryChartsView: View {
 
 private struct CompactTrendSection: View {
     let points: [CompactTrendPoint]
+    let issues: [NetworkIssueRecord]
+    let strings: SpeedStrings
+    let locale: Locale
     let primaryColor: Color
     let secondaryColor: Color
-    let locale: Locale
     let primaryTitle: String
     let secondaryTitle: String
     let primaryLegend: MiniMetricLegend
@@ -104,7 +123,7 @@ private struct CompactTrendSection: View {
     let valueFormatter: (Double) -> String
 
     @State
-    private var selectedPoint: CompactTrendPoint?
+    private var selectedEvent: CompactTrendEvent?
 
     @State
     private var selectedPlotX: CGFloat?
@@ -114,6 +133,17 @@ private struct CompactTrendSection: View {
 
     @State
     private var isHovering = false
+
+    private var events: [CompactTrendEvent] {
+        let pointEvents = points.map { point in
+            CompactTrendEvent(measuredAt: point.measuredAt, point: point, issue: nil)
+        }
+        let issueEvents = issues.map { issue in
+            CompactTrendEvent(measuredAt: issue.measuredAt, point: nil, issue: issue)
+        }
+
+        return (pointEvents + issueEvents).sorted { $0.measuredAt < $1.measuredAt }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -127,6 +157,11 @@ private struct CompactTrendSection: View {
 
             ZStack(alignment: .topLeading) {
                 Chart {
+                    if points.isEmpty {
+                        RuleMark(y: .value("Placeholder", 0))
+                            .foregroundStyle(.clear)
+                    }
+
                     ForEach(points) { point in
                         LineMark(
                             x: .value("Time", point.measuredAt),
@@ -149,11 +184,13 @@ private struct CompactTrendSection: View {
                         .foregroundStyle(secondaryColor.opacity(0.88))
                     }
 
-                    if let selectedPoint {
-                        RuleMark(x: .value("Selected", selectedPoint.measuredAt))
+                    if let selectedEvent {
+                        RuleMark(x: .value("Selected", selectedEvent.measuredAt))
                             .foregroundStyle(Color.white.opacity(0.12))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    }
 
+                    if let selectedPoint = selectedEvent?.point {
                         PointMark(
                             x: .value("Time", selectedPoint.measuredAt),
                             y: .value("Primary", selectedPoint.primary)
@@ -192,35 +229,23 @@ private struct CompactTrendSection: View {
                     }
                 }
                 .chartPlotStyle { plot in
-                    plot
-                        .background(Color.clear)
+                    plot.background(Color.clear)
                 }
                 .frame(height: chartHeight)
                 .padding(.top, tooltipLaneHeight)
 
                 if isHovering,
-                   let selectedPoint,
+                   let selectedEvent,
                    let selectedPlotX,
                    !plotFrame.isEmpty {
-                    CompactTrendTooltip(
-                        timestamp: selectedPoint.measuredAt.formatted(
-                            Date.FormatStyle(date: .omitted, time: .shortened)
-                                .locale(locale)
-                        ),
-                        primaryTitle: primaryTitle,
-                        primaryValue: valueFormatter(selectedPoint.primary),
-                        primaryColor: primaryColor,
-                        secondaryTitle: secondaryTitle,
-                        secondaryValue: valueFormatter(selectedPoint.secondary),
-                        secondaryColor: secondaryColor
-                    )
-                    .position(
-                        x: preferredTooltipX(for: selectedPlotX, in: plotFrame),
-                        y: tooltipLaneHeight * 0.5
-                    )
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                    .zIndex(2)
-                    .allowsHitTesting(false)
+                    compactTooltip(for: selectedEvent)
+                        .position(
+                            x: preferredTooltipX(for: selectedPlotX, in: plotFrame),
+                            y: tooltipLaneHeight * 0.5
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                        .zIndex(2)
+                        .allowsHitTesting(false)
                 }
             }
             .frame(height: chartHeight + tooltipLaneHeight)
@@ -234,6 +259,8 @@ private struct CompactTrendSection: View {
                 let plotFrame = geometry[plotFrameAnchor]
 
                 ZStack(alignment: .topLeading) {
+                    issueMarkers(proxy: proxy, plotFrame: plotFrame)
+
                     Rectangle()
                         .fill(.clear)
                         .contentShape(Rectangle())
@@ -247,6 +274,48 @@ private struct CompactTrendSection: View {
         }
     }
 
+    @ViewBuilder
+    private func issueMarkers(proxy: ChartProxy, plotFrame: CGRect) -> some View {
+        ForEach(issues, id: \.measuredAt) { issue in
+            if let plotX = proxy.position(forX: issue.measuredAt) {
+                NetworkIssueMarkerView(
+                    issue: issue,
+                    isSelected: selectedEvent?.issue == issue,
+                    size: selectedEvent?.issue == issue ? 16 : 13
+                )
+                .position(x: plotFrame.minX + plotX, y: plotFrame.maxY - 8)
+                .allowsHitTesting(false)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func compactTooltip(for event: CompactTrendEvent) -> some View {
+        if let issue = event.issue {
+            CompactTrendIssueTooltip(
+                timestamp: event.measuredAt.formatted(
+                    Date.FormatStyle(date: .omitted, time: .shortened)
+                        .locale(locale)
+                ),
+                issue: issue,
+                strings: strings
+            )
+        } else if let point = event.point {
+            CompactTrendTooltip(
+                timestamp: event.measuredAt.formatted(
+                    Date.FormatStyle(date: .omitted, time: .shortened)
+                        .locale(locale)
+                ),
+                primaryTitle: primaryTitle,
+                primaryValue: valueFormatter(point.primary),
+                primaryColor: primaryColor,
+                secondaryTitle: secondaryTitle,
+                secondaryValue: valueFormatter(point.secondary),
+                secondaryColor: secondaryColor
+            )
+        }
+    }
+
     private func handleHover(
         _ phase: HoverPhase,
         proxy: ChartProxy,
@@ -256,7 +325,7 @@ private struct CompactTrendSection: View {
         case let .active(location):
             guard plotFrame.contains(location) else {
                 isHovering = false
-                selectedPoint = nil
+                selectedEvent = nil
                 selectedPlotX = nil
                 return
             }
@@ -266,35 +335,35 @@ private struct CompactTrendSection: View {
 
             let plotX = location.x - plotFrame.origin.x
             guard let hoveredDate: Date = proxy.value(atX: plotX) else {
-                selectedPoint = nil
+                selectedEvent = nil
                 selectedPlotX = nil
                 return
             }
 
-            let point = nearestPoint(to: hoveredDate)
-            selectedPoint = point
+            let event = nearestEvent(to: hoveredDate)
+            selectedEvent = event
 
-            if let point, let snappedPlotX = proxy.position(forX: point.measuredAt) {
+            if let event, let snappedPlotX = proxy.position(forX: event.measuredAt) {
                 selectedPlotX = plotFrame.minX + snappedPlotX
             } else {
                 selectedPlotX = nil
             }
         case .ended:
             isHovering = false
-            selectedPoint = nil
+            selectedEvent = nil
             selectedPlotX = nil
         }
     }
 
-    private func nearestPoint(to hoveredDate: Date) -> CompactTrendPoint? {
-        points.min { lhs, rhs in
+    private func nearestEvent(to hoveredDate: Date) -> CompactTrendEvent? {
+        events.min { lhs, rhs in
             abs(lhs.measuredAt.timeIntervalSince(hoveredDate))
                 < abs(rhs.measuredAt.timeIntervalSince(hoveredDate))
         }
     }
 
     private func preferredTooltipX(for pointX: CGFloat, in plotFrame: CGRect) -> CGFloat {
-        let halfWidth: CGFloat = 76
+        let halfWidth: CGFloat = 84
         let clearance: CGFloat = 28
 
         if pointX <= plotFrame.midX {
@@ -307,7 +376,7 @@ private struct CompactTrendSection: View {
     }
 
     private var tooltipLaneHeight: CGFloat {
-        34
+        44
     }
 
     private var chartHeight: CGFloat {
@@ -395,10 +464,83 @@ private struct CompactTrendTooltip: View {
     }
 }
 
-private struct CompactTrendPoint: Identifiable {
+private struct CompactTrendIssueTooltip: View {
+    let timestamp: String
+    let issue: NetworkIssueRecord
+    let strings: SpeedStrings
+
+    private var summaryText: String? {
+        if let pathStatus = issue.pathStatusTitle(using: strings) {
+            return pathStatus
+        }
+
+        if let diagnosticCode = issue.diagnosticCode {
+            return diagnosticCode
+        }
+
+        if let message = issue.message, !message.isEmpty {
+            return message
+        }
+
+        return nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(timestamp)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(SpeedChrome.textTertiary)
+
+            HStack(spacing: 6) {
+                Image(systemName: issue.kind.symbolName)
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundStyle(issue.tintColor)
+
+                Text(issue.title(using: strings))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textPrimary)
+            }
+
+            if let summaryText {
+                Text(summaryText)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(SpeedChrome.textSecondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: 160, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial.opacity(0.92))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(issue.tintColor.opacity(0.06))
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(issue.tintColor.opacity(0.18), lineWidth: 0.8)
+        )
+        .shadow(color: .black.opacity(0.14), radius: 10, y: 4)
+    }
+}
+
+private struct CompactTrendPoint: Identifiable, Equatable {
     let measuredAt: Date
     let primary: Double
     let secondary: Double
+
+    var id: Date {
+        measuredAt
+    }
+}
+
+private struct CompactTrendEvent: Identifiable, Equatable {
+    let measuredAt: Date
+    let point: CompactTrendPoint?
+    let issue: NetworkIssueRecord?
 
     var id: Date {
         measuredAt

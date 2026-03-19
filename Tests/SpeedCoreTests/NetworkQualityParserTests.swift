@@ -33,4 +33,58 @@ final class NetworkQualityParserTests: XCTestCase {
             XCTAssertEqual(error as? NetworkQualityError, .noOutput)
         }
     }
+
+    func testParseOutputRecognizesInternetOutagePayload() throws {
+        let json = """
+        {
+          "end_date": "2026-03-19 23:29:10.323",
+          "error_code": -1009,
+          "error_domain": "NSURLErrorDomain",
+          "os_version": "Version 26.3.1 (Build 25D2128)",
+          "start_date": "2026-03-19 23:29:10.305",
+          "test_endpoint": "defra3-edge-bx-009.aaplimg.com"
+        }
+        """
+
+        let output = try NetworkQualityParser.parseOutput(from: Data(json.utf8))
+
+        switch output {
+        case .success:
+            XCTFail("Expected failure output for offline payload.")
+        case let .failure(parsedFailure):
+            XCTAssertEqual(parsedFailure.kind, .internetUnavailable)
+            XCTAssertEqual(parsedFailure.context.errorDomain, NSURLErrorDomain)
+            XCTAssertEqual(parsedFailure.context.errorCode, -1009)
+            XCTAssertEqual(parsedFailure.context.serverName, "defra3-edge-bx-009.aaplimg.com")
+        }
+    }
+
+    func testParseOutputRecognizesTimeoutFromPartialPayloadNearMaximumRuntime() throws {
+        let json = """
+        {
+          "base_rtt": 30.906618118286133,
+          "dl_throughput": 46617660,
+          "end_date": "2026-03-19 23:28:55.888",
+          "interface_name": "en0",
+          "start_date": "2026-03-19 23:28:54.763",
+          "test_endpoint": "defra3-edge-bx-009.aaplimg.com",
+          "ul_responsiveness": 2748.091552734375,
+          "ul_throughput": 58143588
+        }
+        """
+
+        let output = try NetworkQualityParser.parseOutput(
+            from: Data(json.utf8),
+            maximumRuntime: 1
+        )
+
+        switch output {
+        case .success:
+            XCTFail("Expected timeout failure for truncated payload.")
+        case let .failure(parsedFailure):
+            XCTAssertEqual(parsedFailure.kind, .timeout)
+            XCTAssertEqual(parsedFailure.context.durationSeconds, 1)
+            XCTAssertEqual(parsedFailure.context.interfaceName, "en0")
+        }
+    }
 }

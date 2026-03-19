@@ -17,8 +17,20 @@ final class SpeedHistoryStoreTests: XCTestCase {
         _ = historyStore.append(firstResult)
         let storedHistory = historyStore.append(secondResult)
 
-        XCTAssertEqual(storedHistory, [firstResult, secondResult])
-        XCTAssertEqual(historyStore.loadHistory(), [firstResult, secondResult])
+        XCTAssertEqual(
+            storedHistory,
+            [
+                SpeedTestHistoryEntry(result: firstResult),
+                SpeedTestHistoryEntry(result: secondResult)
+            ]
+        )
+        XCTAssertEqual(
+            historyStore.loadHistory(),
+            [
+                SpeedTestHistoryEntry(result: firstResult),
+                SpeedTestHistoryEntry(result: secondResult)
+            ]
+        )
     }
 
     func testHistoryStoreTrimsOldResultsWhenLimitIsExceeded() {
@@ -38,8 +50,46 @@ final class SpeedHistoryStoreTests: XCTestCase {
         _ = historyStore.append(secondResult)
         let trimmedHistory = historyStore.append(thirdResult)
 
-        XCTAssertEqual(trimmedHistory, [secondResult, thirdResult])
-        XCTAssertEqual(historyStore.loadHistory(), [secondResult, thirdResult])
+        XCTAssertEqual(
+            trimmedHistory,
+            [
+                SpeedTestHistoryEntry(result: secondResult),
+                SpeedTestHistoryEntry(result: thirdResult)
+            ]
+        )
+        XCTAssertEqual(
+            historyStore.loadHistory(),
+            [
+                SpeedTestHistoryEntry(result: secondResult),
+                SpeedTestHistoryEntry(result: thirdResult)
+            ]
+        )
+    }
+
+    func testHistoryStoreMigratesLegacyResultArrays() throws {
+        let directoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SpeedHistoryStoreTests-\(UUID().uuidString)", isDirectory: true)
+        let historyStore = SpeedHistoryStore(directoryURL: directoryURL)
+
+        defer {
+            try? FileManager.default.removeItem(at: directoryURL)
+        }
+
+        let legacyResult = makeResult(offset: 0, download: 160, upload: 36)
+        try FileManager.default.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        let legacyData = try JSONEncoder().encode([legacyResult])
+        try legacyData.write(to: fileURL)
+
+        XCTAssertEqual(
+            historyStore.loadHistory(),
+            [SpeedTestHistoryEntry(result: legacyResult)]
+        )
     }
 
     private func makeResult(offset: TimeInterval, download: Double, upload: Double) -> SpeedTestResult {

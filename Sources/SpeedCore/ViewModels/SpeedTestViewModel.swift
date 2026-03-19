@@ -12,7 +12,7 @@ public enum MeasurementDeltaTrend: Equatable, Sendable {
 public final class SpeedTestViewModel {
     public let localization: SpeedLocalization
     public private(set) var lastResult: SpeedTestResult?
-    public private(set) var history: [SpeedTestResult]
+    public private(set) var history: [SpeedTestHistoryEntry]
     public private(set) var isRunning = false
     public private(set) var elapsedSeconds = 0
     public var onRunFinished: (@MainActor @Sendable () -> Void)?
@@ -45,7 +45,7 @@ public final class SpeedTestViewModel {
         self.historyStore = historyStore
         self.localization = localization
         self.history = history
-        self.lastResult = history.last
+        self.lastResult = history.compactMap(\.result).last
     }
 
     public var errorMessage: String? {
@@ -305,10 +305,12 @@ public final class SpeedTestViewModel {
                 }
 
                 self.history = self.historyStore.append(result)
-                self.lastResult = self.history.last
+                self.lastResult = self.history.compactMap(\.result).last
                 self.userFacingError = nil
             } catch let error as NetworkQualityError {
                 if error != .cancelled {
+                    let issue = NetworkIssueRecord(error: error)
+                    self.history = self.historyStore.append(issue)
                     self.userFacingError = .networkQuality(error)
                 }
             } catch {
@@ -326,7 +328,11 @@ public final class SpeedTestViewModel {
     }
 
     private var previousResult: SpeedTestResult? {
-        history.dropLast().last
+        measurementHistory.dropLast().last
+    }
+
+    private var measurementHistory: [SpeedTestResult] {
+        history.compactMap(\.result)
     }
 
     private var normalizedDownloadDeltaMbps: Double? {

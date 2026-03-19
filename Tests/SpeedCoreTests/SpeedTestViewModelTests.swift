@@ -69,6 +69,56 @@ final class SpeedTestViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.downloadDeltaText, "0.0 Mbps")
     }
 
+    func testLatestFailureKeepsLastSuccessfulMeasurementForDelta() {
+        let suiteName = "SpeedTestViewModelTests-\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Expected dedicated user defaults suite.")
+        }
+
+        let directoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SpeedTestViewModelTests-\(UUID().uuidString)", isDirectory: true)
+
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+            try? FileManager.default.removeItem(at: directoryURL)
+        }
+
+        let settingsStore = SpeedSettingsStore(userDefaults: userDefaults)
+        let localization = SpeedLocalization(
+            settingsStore: settingsStore,
+            preferredLanguagesProvider: { ["en-US"] }
+        )
+        let historyStore = SpeedHistoryStore(directoryURL: directoryURL)
+
+        _ = historyStore.append(makeResult(offset: -600, download: 120.0))
+        _ = historyStore.append(makeResult(offset: -300, download: 145.4))
+        _ = historyStore.append(
+            NetworkIssueRecord(
+                kind: .timeout,
+                measuredAt: Date(timeIntervalSince1970: 1_710_000_000),
+                message: nil,
+                status: nil,
+                errorDomain: NSURLErrorDomain,
+                errorCode: URLError.timedOut.rawValue,
+                durationSeconds: 35,
+                interfaceName: "en0",
+                serverName: "speed.test",
+                pathStatus: "satisfied",
+                activeInterfaceNames: ["en0"],
+                activeInterfaceKinds: ["wifi"]
+            )
+        )
+
+        let viewModel = SpeedTestViewModel(
+            historyStore: historyStore,
+            localization: localization
+        )
+
+        XCTAssertEqual(viewModel.downloadDeltaTrend, .up)
+        XCTAssertEqual(viewModel.downloadDeltaText, "+25.4 Mbps")
+        XCTAssertEqual(viewModel.lastResult?.downloadMbps ?? 0, 145.4, accuracy: 0.0001)
+    }
+
     private func makeResult(offset: TimeInterval, download: Double) -> SpeedTestResult {
         SpeedTestResult(
             downloadMbps: download,

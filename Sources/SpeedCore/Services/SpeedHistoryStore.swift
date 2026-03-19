@@ -35,23 +35,41 @@ public final class SpeedHistoryStore {
         self.maxEntries = maxEntries
     }
 
-    public func loadHistory() -> [SpeedTestResult] {
+    public func loadHistory() -> [SpeedTestHistoryEntry] {
         guard fileManager.fileExists(atPath: fileURL.path) else {
             return []
         }
 
         do {
             let data = try Data(contentsOf: fileURL)
-            return try decoder.decode([SpeedTestResult].self, from: data)
+            if let history = try? decoder.decode([SpeedTestHistoryEntry].self, from: data) {
+                return history
+            }
+
+            if let legacyHistory = try? decoder.decode([SpeedTestResult].self, from: data) {
+                return legacyHistory.map(SpeedTestHistoryEntry.init(result:))
+            }
+
+            return []
         } catch {
             return []
         }
     }
 
     @discardableResult
-    public func append(_ result: SpeedTestResult) -> [SpeedTestResult] {
+    public func append(_ result: SpeedTestResult) -> [SpeedTestHistoryEntry] {
+        append(SpeedTestHistoryEntry(result: result))
+    }
+
+    @discardableResult
+    public func append(_ issue: NetworkIssueRecord) -> [SpeedTestHistoryEntry] {
+        append(SpeedTestHistoryEntry(issue: issue))
+    }
+
+    @discardableResult
+    public func append(_ entry: SpeedTestHistoryEntry) -> [SpeedTestHistoryEntry] {
         var history = loadHistory()
-        history.append(result)
+        history.append(entry)
 
         if history.count > maxEntries {
             history.removeFirst(history.count - maxEntries)
@@ -62,7 +80,7 @@ public final class SpeedHistoryStore {
     }
 
     @discardableResult
-    public func removeAll() -> [SpeedTestResult] {
+    public func removeAll() -> [SpeedTestHistoryEntry] {
         do {
             if fileManager.fileExists(atPath: fileURL.path) {
                 try fileManager.removeItem(at: fileURL)
@@ -74,7 +92,7 @@ public final class SpeedHistoryStore {
         return []
     }
 
-    private func save(_ history: [SpeedTestResult]) {
+    private func save(_ history: [SpeedTestHistoryEntry]) {
         do {
             try fileManager.createDirectory(
                 at: directoryURL,

@@ -26,7 +26,7 @@ struct SpeedMenuPanel: View {
                         .padding(.vertical, 16)
 
                     CompactHistoryChartsView(
-                        results: viewModel.history,
+                        entries: viewModel.history,
                         localization: localization
                     )
                 }
