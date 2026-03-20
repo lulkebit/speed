@@ -63,6 +63,9 @@ public enum NetworkIssueKind: String, Codable, Equatable, Sendable {
 public struct NetworkIssueRecord: Codable, Equatable, Sendable {
     public let kind: NetworkIssueKind
     public let measuredAt: Date
+    public let startedAt: Date
+    public let lastObservedAt: Date
+    public let occurrenceCount: Int
     public let message: String?
     public let status: Int32?
     public let errorDomain: String?
@@ -77,6 +80,9 @@ public struct NetworkIssueRecord: Codable, Equatable, Sendable {
     public init(
         kind: NetworkIssueKind,
         measuredAt: Date,
+        startedAt: Date? = nil,
+        lastObservedAt: Date? = nil,
+        occurrenceCount: Int = 1,
         message: String?,
         status: Int32?,
         errorDomain: String?,
@@ -88,8 +94,14 @@ public struct NetworkIssueRecord: Codable, Equatable, Sendable {
         activeInterfaceNames: [String],
         activeInterfaceKinds: [String]
     ) {
+        let normalizedStartedAt = startedAt ?? measuredAt
+        let normalizedLastObservedAt = lastObservedAt ?? measuredAt
+
         self.kind = kind
-        self.measuredAt = measuredAt
+        self.measuredAt = normalizedLastObservedAt
+        self.startedAt = normalizedStartedAt
+        self.lastObservedAt = normalizedLastObservedAt
+        self.occurrenceCount = max(occurrenceCount, 1)
         self.message = message
         self.status = status
         self.errorDomain = errorDomain
@@ -138,6 +150,49 @@ public struct NetworkIssueRecord: Codable, Equatable, Sendable {
             activeInterfaceNames: context?.activeInterfaceNames ?? [],
             activeInterfaceKinds: context?.activeInterfaceKinds ?? []
         )
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let measuredAt = try container.decode(Date.self, forKey: .measuredAt)
+
+        try self.init(
+            kind: container.decode(NetworkIssueKind.self, forKey: .kind),
+            measuredAt: measuredAt,
+            startedAt: try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? measuredAt,
+            lastObservedAt: try container.decodeIfPresent(Date.self, forKey: .lastObservedAt) ?? measuredAt,
+            occurrenceCount: try container.decodeIfPresent(Int.self, forKey: .occurrenceCount) ?? 1,
+            message: try container.decodeIfPresent(String.self, forKey: .message),
+            status: try container.decodeIfPresent(Int32.self, forKey: .status),
+            errorDomain: try container.decodeIfPresent(String.self, forKey: .errorDomain),
+            errorCode: try container.decodeIfPresent(Int.self, forKey: .errorCode),
+            durationSeconds: try container.decodeIfPresent(Int.self, forKey: .durationSeconds),
+            interfaceName: try container.decodeIfPresent(String.self, forKey: .interfaceName),
+            serverName: try container.decodeIfPresent(String.self, forKey: .serverName),
+            pathStatus: try container.decodeIfPresent(String.self, forKey: .pathStatus),
+            activeInterfaceNames: try container.decodeIfPresent([String].self, forKey: .activeInterfaceNames) ?? [],
+            activeInterfaceKinds: try container.decodeIfPresent([String].self, forKey: .activeInterfaceKinds) ?? []
+        )
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(kind, forKey: .kind)
+        try container.encode(measuredAt, forKey: .measuredAt)
+        try container.encode(startedAt, forKey: .startedAt)
+        try container.encode(lastObservedAt, forKey: .lastObservedAt)
+        try container.encode(occurrenceCount, forKey: .occurrenceCount)
+        try container.encodeIfPresent(message, forKey: .message)
+        try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(errorDomain, forKey: .errorDomain)
+        try container.encodeIfPresent(errorCode, forKey: .errorCode)
+        try container.encodeIfPresent(durationSeconds, forKey: .durationSeconds)
+        try container.encodeIfPresent(interfaceName, forKey: .interfaceName)
+        try container.encodeIfPresent(serverName, forKey: .serverName)
+        try container.encodeIfPresent(pathStatus, forKey: .pathStatus)
+        try container.encode(activeInterfaceNames, forKey: .activeInterfaceNames)
+        try container.encode(activeInterfaceKinds, forKey: .activeInterfaceKinds)
     }
 
     public func title(using strings: SpeedStrings) -> String {
@@ -192,5 +247,73 @@ public struct NetworkIssueRecord: Codable, Equatable, Sendable {
         }
 
         return names.joined(separator: ", ")
+    }
+
+    public var coversMultipleEvents: Bool {
+        occurrenceCount > 1 || startedAt != lastObservedAt
+    }
+
+    public var disturbanceDurationSeconds: Int? {
+        let spanSeconds = max(Int(lastObservedAt.timeIntervalSince(startedAt).rounded()), 0)
+        let testDurationSeconds = durationSeconds ?? 0
+        let totalSeconds = max(spanSeconds + testDurationSeconds, testDurationSeconds)
+        return totalSeconds > 0 ? totalSeconds : nil
+    }
+
+    public func merged(with next: NetworkIssueRecord) -> NetworkIssueRecord {
+        NetworkIssueRecord(
+            kind: Self.preferredKind(between: kind, and: next.kind),
+            measuredAt: next.lastObservedAt,
+            startedAt: min(startedAt, next.startedAt),
+            lastObservedAt: max(lastObservedAt, next.lastObservedAt),
+            occurrenceCount: occurrenceCount + next.occurrenceCount,
+            message: next.message ?? message,
+            status: next.status ?? status,
+            errorDomain: next.errorDomain ?? errorDomain,
+            errorCode: next.errorCode ?? errorCode,
+            durationSeconds: next.durationSeconds ?? durationSeconds,
+            interfaceName: next.interfaceName ?? interfaceName,
+            serverName: next.serverName ?? serverName,
+            pathStatus: next.pathStatus ?? pathStatus,
+            activeInterfaceNames: next.activeInterfaceNames.isEmpty
+                ? activeInterfaceNames
+                : next.activeInterfaceNames,
+            activeInterfaceKinds: next.activeInterfaceKinds.isEmpty
+                ? activeInterfaceKinds
+                : next.activeInterfaceKinds
+        )
+    }
+
+    public func shouldMerge(
+        with next: NetworkIssueRecord,
+        maximumGap: TimeInterval = 10_800
+    ) -> Bool {
+        next.startedAt.timeIntervalSince(lastObservedAt) <= maximumGap
+    }
+
+    private static func preferredKind(
+        between first: NetworkIssueKind,
+        and second: NetworkIssueKind
+    ) -> NetworkIssueKind {
+        let rankedKinds: [NetworkIssueKind] = [.internetUnavailable, .timeout, .failure]
+        return rankedKinds.first(where: { $0 == first || $0 == second }) ?? second
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case measuredAt
+        case startedAt
+        case lastObservedAt
+        case occurrenceCount
+        case message
+        case status
+        case errorDomain
+        case errorCode
+        case durationSeconds
+        case interfaceName
+        case serverName
+        case pathStatus
+        case activeInterfaceNames
+        case activeInterfaceKinds
     }
 }

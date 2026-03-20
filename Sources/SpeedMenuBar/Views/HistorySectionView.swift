@@ -212,6 +212,7 @@ struct HistorySectionView: View {
                 }
             }
             .frame(height: 154)
+            .padding(.top, issueMarkerLaneHeight)
         }
     }
 
@@ -328,6 +329,7 @@ struct HistorySectionView: View {
                 }
             }
             .frame(height: 154)
+            .padding(.top, issueMarkerLaneHeight)
         }
     }
 
@@ -395,7 +397,7 @@ struct HistorySectionView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SpeedChrome.textPrimary)
 
-                Text(timestampLabel(for: issue.measuredAt))
+                Text(issueTimestampLabel(issue))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(SpeedChrome.textTertiary)
             }
@@ -540,13 +542,20 @@ struct HistorySectionView: View {
     }
 
     private func issueTooltip(_ issue: NetworkIssueRecord) -> some View {
-        tooltipCard(timestamp: tooltipTimestamp(for: issue.measuredAt)) {
+        tooltipCard(timestamp: issueTooltipTimestamp(issue)) {
             NetworkIssueBadgeView(issue: issue, strings: strings)
 
-            if let durationSeconds = issue.durationSeconds {
+            if issue.occurrenceCount > 1 {
+                tooltipMetadataRow(
+                    title: strings.historyIssueOccurrencesLabel,
+                    value: "\(issue.occurrenceCount)x"
+                )
+            }
+
+            if let durationSeconds = issue.disturbanceDurationSeconds {
                 tooltipMetadataRow(
                     title: strings.historyIssueDurationLabel,
-                    value: "\(durationSeconds)s"
+                    value: formattedIssueDuration(durationSeconds)
                 )
             }
 
@@ -660,6 +669,7 @@ struct HistorySectionView: View {
         Group {
             if let plotFrameAnchor = proxy.plotFrame {
                 let plotFrame = geometry[plotFrameAnchor]
+                let hoverFrame = interactionFrame(for: plotFrame)
 
                 ZStack(alignment: .topLeading) {
                     issueMarkers(proxy: proxy, plotFrame: plotFrame, chart: chart, issues: issues)
@@ -667,10 +677,17 @@ struct HistorySectionView: View {
                     Rectangle()
                         .fill(.clear)
                         .contentShape(Rectangle())
-                        .frame(width: plotFrame.width, height: plotFrame.height)
-                        .position(x: plotFrame.midX, y: plotFrame.midY)
+                        .frame(width: hoverFrame.width, height: hoverFrame.height)
+                        .position(x: hoverFrame.midX, y: hoverFrame.midY)
                         .onContinuousHover { phase in
-                            handleHover(phase, proxy: proxy, plotFrame: plotFrame, chart: chart)
+                            handleHover(
+                                phase,
+                                proxy: proxy,
+                                plotFrame: plotFrame,
+                                hoverFrame: hoverFrame,
+                                chart: chart,
+                                issues: issues
+                            )
                         }
 
                     if activeChart == chart,
@@ -704,7 +721,7 @@ struct HistorySectionView: View {
                     isSelected: activeChart == chart && selectedEntry?.issue == issue,
                     size: activeChart == chart && selectedEntry?.issue == issue ? 18 : 15
                 )
-                .position(x: plotFrame.minX + plotX, y: plotFrame.maxY - 11)
+                .position(x: plotFrame.minX + plotX, y: issueMarkerY(in: plotFrame))
                 .allowsHitTesting(false)
             }
         }
@@ -714,18 +731,31 @@ struct HistorySectionView: View {
         _ phase: HoverPhase,
         proxy: ChartProxy,
         plotFrame: CGRect,
-        chart: HistoryChartKind
+        hoverFrame: CGRect,
+        chart: HistoryChartKind,
+        issues: [NetworkIssueRecord]
     ) {
         switch phase {
         case let .active(location):
-            guard plotFrame.contains(location) else {
+            if let hoveredIssue = hoveredIssue(
+                at: location,
+                proxy: proxy,
+                plotFrame: plotFrame,
+                issues: issues
+            ) {
+                selectedEntry = SpeedTestHistoryEntry(issue: hoveredIssue)
+                activeChart = chart
+                return
+            }
+
+            guard hoverFrame.contains(location) else {
                 if activeChart == chart {
                     clearSelection()
                 }
                 return
             }
 
-            let plotX = location.x - plotFrame.origin.x
+            let plotX = min(max(location.x - plotFrame.origin.x, 0), plotFrame.width)
             guard let hoveredDate: Date = proxy.value(atX: plotX) else {
                 clearSelection()
                 return
@@ -738,6 +768,44 @@ struct HistorySectionView: View {
                 clearSelection()
             }
         }
+    }
+
+    private func hoveredIssue(
+        at location: CGPoint,
+        proxy: ChartProxy,
+        plotFrame: CGRect,
+        issues: [NetworkIssueRecord]
+    ) -> NetworkIssueRecord? {
+        issues.first { issue in
+            guard let markerX = issueMarkerX(for: issue, proxy: proxy, plotFrame: plotFrame) else {
+                return false
+            }
+
+            let markerCenter = CGPoint(x: markerX, y: issueMarkerY(in: plotFrame))
+            return hypot(location.x - markerCenter.x, location.y - markerCenter.y) <= issueHoverRadius
+        }
+    }
+
+    private func issueMarkerX(
+        for issue: NetworkIssueRecord,
+        proxy: ChartProxy,
+        plotFrame: CGRect
+    ) -> CGFloat? {
+        guard let plotX = proxy.position(forX: issue.measuredAt) else {
+            return nil
+        }
+
+        return plotFrame.minX + plotX
+    }
+
+    private func interactionFrame(for plotFrame: CGRect) -> CGRect {
+        let topEdge = min(issueMarkerY(in: plotFrame) - issueHoverRadius, plotFrame.minY)
+        return CGRect(
+            x: plotFrame.minX - hoverHorizontalInset,
+            y: topEdge,
+            width: plotFrame.width + hoverHorizontalInset * 2,
+            height: plotFrame.maxY - topEdge + hoverVerticalInset
+        )
     }
 
     private func nearestEntry(to hoveredDate: Date) -> SpeedTestHistoryEntry? {
@@ -785,8 +853,26 @@ struct HistorySectionView: View {
     }
 
     private func issueRecentSummary(_ issue: NetworkIssueRecord) -> String {
+        var segments = [String]()
+
+        if issue.occurrenceCount > 1 {
+            segments.append("\(issue.occurrenceCount)x")
+        }
+
+        if let pathStatus = issue.pathStatusTitle(using: strings) {
+            segments.append(pathStatus)
+        }
+
         if let diagnosticCode = issue.diagnosticCode {
-            return diagnosticCode
+            segments.append(diagnosticCode)
+        }
+
+        if !segments.isEmpty, segments.count > 1 {
+            return segments.joined(separator: " • ")
+        }
+
+        if let firstSegment = segments.first {
+            return firstSegment
         }
 
         if let interfaces = issue.interfaceSummary {
@@ -800,8 +886,61 @@ struct HistorySectionView: View {
         return strings.networkIssueTitle(issue.kind)
     }
 
+    private func issueTimestampLabel(_ issue: NetworkIssueRecord) -> String {
+        if issue.coversMultipleEvents {
+            return "\(timestampLabel(for: issue.startedAt)) - \(timestampLabel(for: issue.lastObservedAt))"
+        }
+
+        return timestampLabel(for: issue.measuredAt)
+    }
+
+    private func issueTooltipTimestamp(_ issue: NetworkIssueRecord) -> String {
+        if issue.coversMultipleEvents {
+            return "\(tooltipTimestamp(for: issue.startedAt)) - \(tooltipTimestamp(for: issue.lastObservedAt))"
+        }
+
+        return tooltipTimestamp(for: issue.measuredAt)
+    }
+
+    private func formattedIssueDuration(_ totalSeconds: Int) -> String {
+        if totalSeconds < 60 {
+            return "\(totalSeconds)s"
+        }
+
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+
+        if minutes < 60 {
+            return seconds == 0 ? "\(minutes)m" : "\(minutes)m \(seconds)s"
+        }
+
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        return remainingMinutes == 0 ? "\(hours)h" : "\(hours)h \(remainingMinutes)m"
+    }
+
+    private func issueMarkerY(in plotFrame: CGRect) -> CGFloat {
+        max(plotFrame.minY - issueMarkerLaneHeight * 0.45, issueMarkerLaneHeight * 0.5)
+    }
+
     private var tooltipWidth: CGFloat {
         228
+    }
+
+    private var issueMarkerLaneHeight: CGFloat {
+        22
+    }
+
+    private var issueHoverRadius: CGFloat {
+        18
+    }
+
+    private var hoverHorizontalInset: CGFloat {
+        12
+    }
+
+    private var hoverVerticalInset: CGFloat {
+        10
     }
 }
 

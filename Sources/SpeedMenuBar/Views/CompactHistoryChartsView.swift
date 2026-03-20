@@ -257,6 +257,7 @@ private struct CompactTrendSection: View {
         Group {
             if let plotFrameAnchor = proxy.plotFrame {
                 let plotFrame = geometry[plotFrameAnchor]
+                let hoverFrame = interactionFrame(for: plotFrame)
 
                 ZStack(alignment: .topLeading) {
                     issueMarkers(proxy: proxy, plotFrame: plotFrame)
@@ -264,10 +265,15 @@ private struct CompactTrendSection: View {
                     Rectangle()
                         .fill(.clear)
                         .contentShape(Rectangle())
-                        .frame(width: plotFrame.width, height: plotFrame.height)
-                        .position(x: plotFrame.midX, y: plotFrame.midY)
+                        .frame(width: hoverFrame.width, height: hoverFrame.height)
+                        .position(x: hoverFrame.midX, y: hoverFrame.midY)
                         .onContinuousHover { phase in
-                            handleHover(phase, proxy: proxy, plotFrame: plotFrame)
+                            handleHover(
+                                phase,
+                                proxy: proxy,
+                                plotFrame: plotFrame,
+                                hoverFrame: hoverFrame
+                            )
                         }
                 }
             }
@@ -281,9 +287,11 @@ private struct CompactTrendSection: View {
                 NetworkIssueMarkerView(
                     issue: issue,
                     isSelected: selectedEvent?.issue == issue,
-                    size: selectedEvent?.issue == issue ? 16 : 13
+                    size: selectedEvent?.issue == issue
+                        ? (issue.occurrenceCount > 1 ? 18 : 16)
+                        : (issue.occurrenceCount > 1 ? 15 : 13)
                 )
-                .position(x: plotFrame.minX + plotX, y: plotFrame.maxY - 8)
+                .position(x: plotFrame.minX + plotX, y: issueMarkerY(in: plotFrame))
                 .allowsHitTesting(false)
             }
         }
@@ -293,10 +301,7 @@ private struct CompactTrendSection: View {
     private func compactTooltip(for event: CompactTrendEvent) -> some View {
         if let issue = event.issue {
             CompactTrendIssueTooltip(
-                timestamp: event.measuredAt.formatted(
-                    Date.FormatStyle(date: .omitted, time: .shortened)
-                        .locale(locale)
-                ),
+                timestamp: compactIssueTimestamp(issue),
                 issue: issue,
                 strings: strings
             )
@@ -319,21 +324,34 @@ private struct CompactTrendSection: View {
     private func handleHover(
         _ phase: HoverPhase,
         proxy: ChartProxy,
-        plotFrame: CGRect
+        plotFrame: CGRect,
+        hoverFrame: CGRect
     ) {
         switch phase {
         case let .active(location):
-            guard plotFrame.contains(location) else {
+            self.plotFrame = plotFrame
+
+            if let hoveredIssue = hoveredIssue(at: location, proxy: proxy, plotFrame: plotFrame) {
+                isHovering = true
+                selectedEvent = CompactTrendEvent(
+                    measuredAt: hoveredIssue.measuredAt,
+                    point: nil,
+                    issue: hoveredIssue
+                )
+                selectedPlotX = issueMarkerX(for: hoveredIssue, proxy: proxy, plotFrame: plotFrame)
+                return
+            }
+
+            guard hoverFrame.contains(location) else {
                 isHovering = false
                 selectedEvent = nil
                 selectedPlotX = nil
                 return
             }
 
-            self.plotFrame = plotFrame
             isHovering = true
 
-            let plotX = location.x - plotFrame.origin.x
+            let plotX = min(max(location.x - plotFrame.origin.x, 0), plotFrame.width)
             guard let hoveredDate: Date = proxy.value(atX: plotX) else {
                 selectedEvent = nil
                 selectedPlotX = nil
@@ -362,6 +380,42 @@ private struct CompactTrendSection: View {
         }
     }
 
+    private func hoveredIssue(
+        at location: CGPoint,
+        proxy: ChartProxy,
+        plotFrame: CGRect
+    ) -> NetworkIssueRecord? {
+        issues.first { issue in
+            guard let markerX = issueMarkerX(for: issue, proxy: proxy, plotFrame: plotFrame) else {
+                return false
+            }
+
+            let markerCenter = CGPoint(x: markerX, y: issueMarkerY(in: plotFrame))
+            return hypot(location.x - markerCenter.x, location.y - markerCenter.y) <= issueHoverRadius
+        }
+    }
+
+    private func issueMarkerX(
+        for issue: NetworkIssueRecord,
+        proxy: ChartProxy,
+        plotFrame: CGRect
+    ) -> CGFloat? {
+        guard let plotX = proxy.position(forX: issue.measuredAt) else {
+            return nil
+        }
+
+        return plotFrame.minX + plotX
+    }
+
+    private func interactionFrame(for plotFrame: CGRect) -> CGRect {
+        CGRect(
+            x: plotFrame.minX - hoverHorizontalInset,
+            y: min(issueMarkerY(in: plotFrame) - issueHoverRadius, plotFrame.minY),
+            width: plotFrame.width + hoverHorizontalInset * 2,
+            height: plotFrame.maxY - min(issueMarkerY(in: plotFrame) - issueHoverRadius, plotFrame.minY) + hoverVerticalInset
+        )
+    }
+
     private func preferredTooltipX(for pointX: CGFloat, in plotFrame: CGRect) -> CGFloat {
         let halfWidth: CGFloat = 84
         let clearance: CGFloat = 28
@@ -381,6 +435,36 @@ private struct CompactTrendSection: View {
 
     private var chartHeight: CGFloat {
         56
+    }
+
+    private func compactIssueTimestamp(_ issue: NetworkIssueRecord) -> String {
+        let style = Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)
+
+        if issue.coversMultipleEvents {
+            return "\(issue.startedAt.formatted(style)) - \(issue.lastObservedAt.formatted(style))"
+        }
+
+        return issue.measuredAt.formatted(style)
+    }
+
+    private func issueMarkerY(in plotFrame: CGRect) -> CGFloat {
+        min(plotFrame.minY - 6, issueMarkerTopInset)
+    }
+
+    private var issueMarkerTopInset: CGFloat {
+        4
+    }
+
+    private var issueHoverRadius: CGFloat {
+        18
+    }
+
+    private var hoverHorizontalInset: CGFloat {
+        14
+    }
+
+    private var hoverVerticalInset: CGFloat {
+        10
     }
 }
 
@@ -496,7 +580,7 @@ private struct CompactTrendIssueTooltip: View {
                     .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(issue.tintColor)
 
-                Text(issue.title(using: strings))
+                Text(issue.occurrenceCount > 1 ? "\(issue.title(using: strings)) \(issue.occurrenceCount)x" : issue.title(using: strings))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(SpeedChrome.textPrimary)
             }

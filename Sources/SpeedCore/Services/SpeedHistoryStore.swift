@@ -43,11 +43,11 @@ public final class SpeedHistoryStore {
         do {
             let data = try Data(contentsOf: fileURL)
             if let history = try? decoder.decode([SpeedTestHistoryEntry].self, from: data) {
-                return history
+                return normalizedHistory(history)
             }
 
             if let legacyHistory = try? decoder.decode([SpeedTestResult].self, from: data) {
-                return legacyHistory.map(SpeedTestHistoryEntry.init(result:))
+                return normalizedHistory(legacyHistory.map(SpeedTestHistoryEntry.init(result:)))
             }
 
             return []
@@ -69,7 +69,7 @@ public final class SpeedHistoryStore {
     @discardableResult
     public func append(_ entry: SpeedTestHistoryEntry) -> [SpeedTestHistoryEntry] {
         var history = loadHistory()
-        history.append(entry)
+        history = normalizedHistory(history + [entry])
 
         if history.count > maxEntries {
             history.removeFirst(history.count - maxEntries)
@@ -104,5 +104,26 @@ public final class SpeedHistoryStore {
         } catch {
             return
         }
+    }
+
+    private func normalizedHistory(_ history: [SpeedTestHistoryEntry]) -> [SpeedTestHistoryEntry] {
+        var normalizedHistory = [SpeedTestHistoryEntry]()
+        normalizedHistory.reserveCapacity(history.count)
+
+        for entry in history {
+            if let issue = entry.issue,
+               let previousEntry = normalizedHistory.last,
+               let previousIssue = previousEntry.issue,
+               previousIssue.shouldMerge(with: issue) {
+                normalizedHistory.removeLast()
+                normalizedHistory.append(
+                    SpeedTestHistoryEntry(issue: previousIssue.merged(with: issue))
+                )
+            } else {
+                normalizedHistory.append(entry)
+            }
+        }
+
+        return normalizedHistory
     }
 }

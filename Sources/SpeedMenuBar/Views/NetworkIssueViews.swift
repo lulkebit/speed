@@ -50,6 +50,13 @@ struct NetworkIssueBadgeView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(SpeedChrome.textPrimary)
                 .lineLimit(1)
+
+            if issue.occurrenceCount > 1 {
+                Text("\(issue.occurrenceCount)x")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(SpeedChrome.textSecondary)
+                    .monospacedDigit()
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

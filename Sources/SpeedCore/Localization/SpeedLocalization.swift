@@ -110,6 +110,7 @@ public struct SpeedStrings: Sendable {
     public var historyLegendResponsiveness: String { catalog.historyLegendResponsiveness }
     public var historyLegendIncidents: String { catalog.historyLegendIncidents }
     public var historyIssueDurationLabel: String { catalog.historyIssueDurationLabel }
+    public var historyIssueOccurrencesLabel: String { catalog.historyIssueOccurrencesLabel }
     public var historyIssueNetworkStatusLabel: String { catalog.historyIssueNetworkStatusLabel }
     public var historyIssueInterfacesLabel: String { catalog.historyIssueInterfacesLabel }
     public var historyIssueDetailsLabel: String { catalog.historyIssueDetailsLabel }
@@ -327,6 +328,7 @@ private protocol SpeedStringCatalog: Sendable {
     var historyLegendResponsiveness: String { get }
     var historyLegendIncidents: String { get }
     var historyIssueDurationLabel: String { get }
+    var historyIssueOccurrencesLabel: String { get }
     var historyIssueNetworkStatusLabel: String { get }
     var historyIssueInterfacesLabel: String { get }
     var historyIssueDetailsLabel: String { get }
@@ -450,6 +452,7 @@ private struct GermanSpeedStrings: SpeedStringCatalog {
     let historyLegendResponsiveness = "Reaktion"
     let historyLegendIncidents = "Vorfälle"
     let historyIssueDurationLabel = "Dauer"
+    let historyIssueOccurrencesLabel = "Messungen"
     let historyIssueNetworkStatusLabel = "Netzstatus"
     let historyIssueInterfacesLabel = "Schnittstellen"
     let historyIssueDetailsLabel = "Hinweis"
@@ -833,6 +836,7 @@ private struct EnglishSpeedStrings: SpeedStringCatalog {
     let historyLegendResponsiveness = "Responsiveness"
     let historyLegendIncidents = "Incidents"
     let historyIssueDurationLabel = "Duration"
+    let historyIssueOccurrencesLabel = "Checks"
     let historyIssueNetworkStatusLabel = "Path status"
     let historyIssueInterfacesLabel = "Interfaces"
     let historyIssueDetailsLabel = "Details"
