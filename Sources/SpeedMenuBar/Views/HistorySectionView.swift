@@ -11,33 +11,10 @@ struct HistorySectionView: View {
     private var selectedRange: HistoryTimeRange = .day
 
     @State
-    private var selectedEntry: SpeedTestHistoryEntry?
-
-    @State
-    private var activeChart: HistoryChartKind?
+    private var visibleHistory: HistorySectionSnapshot = .empty
 
     private var strings: SpeedStrings {
         localization.strings
-    }
-
-    private var chartDomain: ClosedRange<Date> {
-        selectedRange.chartDomain()
-    }
-
-    private var filteredHistory: [SpeedTestHistoryEntry] {
-        viewModel.history.filter { chartDomain.contains($0.measuredAt) }
-    }
-
-    private var filteredMeasurements: [SpeedTestResult] {
-        filteredHistory.compactMap(\.result)
-    }
-
-    private var filteredIssues: [NetworkIssueRecord] {
-        filteredHistory.compactMap(\.issue)
-    }
-
-    private var recentEntries: [SpeedTestHistoryEntry] {
-        Array(filteredHistory.suffix(4).reversed())
     }
 
     var body: some View {
@@ -51,15 +28,15 @@ struct HistorySectionView: View {
                 }
                 .pickerStyle(.segmented)
 
-                if !filteredHistory.isEmpty {
-                    Text(strings.historyMeasurementsDescription(count: filteredHistory.count))
+                if !visibleHistory.isEmpty {
+                    Text(strings.historyMeasurementsDescription(count: visibleHistory.entries.count))
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundStyle(SpeedChrome.textTertiary)
                         .lineLimit(1)
                 }
             }
 
-            if filteredHistory.isEmpty {
+            if visibleHistory.isEmpty {
                 SubtleDivider()
                     .padding(.vertical, 16)
 
@@ -75,7 +52,7 @@ struct HistorySectionView: View {
 
                 latencyChartSection
 
-                if !recentEntries.isEmpty {
+                if !visibleHistory.recentEntries.isEmpty {
                     SubtleDivider()
                         .padding(.vertical, 16)
 
@@ -84,8 +61,12 @@ struct HistorySectionView: View {
             }
         }
         .padding(.vertical, 4)
+        .onAppear(perform: refreshVisibleHistory)
         .onChange(of: selectedRange) { _, _ in
-            clearSelection()
+            refreshVisibleHistory()
+        }
+        .onChange(of: viewModel.history) { _, _ in
+            refreshVisibleHistory()
         }
     }
 
@@ -103,7 +84,10 @@ struct HistorySectionView: View {
     }
 
     private var throughputChartSection: some View {
-        chartSection(
+        HistoryMetricChartSectionView(
+            snapshot: visibleHistory,
+            selectedRange: selectedRange,
+            localization: localization,
             title: strings.historyChartThroughputTitle,
             legends: [
                 HistoryLegendItem(title: strings.historyLegendDownload, color: SpeedChrome.brand),
@@ -113,111 +97,23 @@ struct HistorySectionView: View {
                     color: .red,
                     symbolName: "exclamationmark.triangle.fill"
                 )
-            ]
-        ) {
-            Chart {
-                if filteredMeasurements.isEmpty {
-                    RuleMark(y: .value("Placeholder", 0))
-                        .foregroundStyle(.clear)
-                }
-
-                ForEach(filteredMeasurements) { result in
-                    LineMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendDownload, result.downloadMbps),
-                        series: .value("Series", strings.historyLegendDownload)
-                    )
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(SpeedChrome.brand)
-
-                    PointMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendDownload, result.downloadMbps)
-                    )
-                    .symbolSize(14)
-                    .foregroundStyle(SpeedChrome.brand.opacity(0.35))
-
-                    LineMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendUpload, result.uploadMbps),
-                        series: .value("Series", strings.historyLegendUpload)
-                    )
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(.green)
-
-                    PointMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendUpload, result.uploadMbps)
-                    )
-                    .symbolSize(14)
-                    .foregroundStyle(Color.green.opacity(0.35))
-                }
-
-                if let selectedEntry {
-                    RuleMark(x: .value("Selected time", selectedEntry.measuredAt))
-                        .foregroundStyle(SpeedChrome.textTertiary.opacity(0.55))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                }
-
-                if let selectedMeasurement = selectedEntry?.result {
-                    PointMark(
-                        x: .value("Time", selectedMeasurement.measuredAt),
-                        y: .value(strings.historyLegendDownload, selectedMeasurement.downloadMbps)
-                    )
-                    .symbolSize(42)
-                    .foregroundStyle(SpeedChrome.brand)
-
-                    PointMark(
-                        x: .value("Time", selectedMeasurement.measuredAt),
-                        y: .value(strings.historyLegendUpload, selectedMeasurement.uploadMbps)
-                    )
-                    .symbolSize(42)
-                    .foregroundStyle(.green)
-                }
-            }
-            .chartLegend(.hidden)
-            .chartForegroundStyleScale([
-                strings.historyLegendDownload: SpeedChrome.brand,
-                strings.historyLegendUpload: Color.green
-            ])
-            .chartXScale(domain: chartDomain)
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: axisDesiredCount)) {
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.divider)
-                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.textTertiary)
-                    AxisValueLabel(format: selectedRange.axisFormatStyle(locale: localization.locale))
-                }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) {
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.divider)
-                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.textTertiary)
-                    AxisValueLabel()
-                }
-            }
-            .chartOverlay { proxy in
-                GeometryReader { geometry in
-                    selectionOverlay(
-                        proxy: proxy,
-                        geometry: geometry,
-                        chart: .throughput,
-                        issues: filteredIssues
-                    )
-                }
-            }
-            .frame(height: 154)
-            .padding(.top, issueMarkerLaneHeight)
-        }
+            ],
+            measurements: visibleHistory.throughputChartMeasurements,
+            primaryTitle: strings.historyLegendDownload,
+            primaryColor: SpeedChrome.brand,
+            primaryValue: \.downloadMbps,
+            secondaryTitle: strings.historyLegendUpload,
+            secondaryColor: .green,
+            secondaryValue: \.uploadMbps,
+            valueUnit: .megabitsPerSecond
+        )
     }
 
     private var latencyChartSection: some View {
-        chartSection(
+        HistoryMetricChartSectionView(
+            snapshot: visibleHistory,
+            selectedRange: selectedRange,
+            localization: localization,
             title: strings.historyChartLatencyTitle,
             legends: [
                 HistoryLegendItem(title: strings.historyLegendLatency, color: .orange),
@@ -227,110 +123,16 @@ struct HistorySectionView: View {
                     color: .red,
                     symbolName: "exclamationmark.triangle.fill"
                 )
-            ]
-        ) {
-            Chart {
-                if filteredMeasurements.isEmpty {
-                    RuleMark(y: .value("Placeholder", 0))
-                        .foregroundStyle(.clear)
-                }
-
-                ForEach(filteredMeasurements) { result in
-                    LineMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendLatency, result.idleLatencyMs),
-                        series: .value("Series", strings.historyLegendLatency)
-                    )
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(.orange)
-
-                    PointMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendLatency, result.idleLatencyMs)
-                    )
-                    .symbolSize(14)
-                    .foregroundStyle(Color.orange.opacity(0.35))
-
-                    LineMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendResponsiveness, result.worstResponsivenessMs),
-                        series: .value("Series", strings.historyLegendResponsiveness)
-                    )
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(.pink)
-
-                    PointMark(
-                        x: .value("Time", result.measuredAt),
-                        y: .value(strings.historyLegendResponsiveness, result.worstResponsivenessMs)
-                    )
-                    .symbolSize(14)
-                    .foregroundStyle(Color.pink.opacity(0.35))
-                }
-
-                if let selectedEntry {
-                    RuleMark(x: .value("Selected time", selectedEntry.measuredAt))
-                        .foregroundStyle(SpeedChrome.textTertiary.opacity(0.55))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                }
-
-                if let selectedMeasurement = selectedEntry?.result {
-                    PointMark(
-                        x: .value("Time", selectedMeasurement.measuredAt),
-                        y: .value(strings.historyLegendLatency, selectedMeasurement.idleLatencyMs)
-                    )
-                    .symbolSize(42)
-                    .foregroundStyle(.orange)
-
-                    PointMark(
-                        x: .value("Time", selectedMeasurement.measuredAt),
-                        y: .value(
-                            strings.historyLegendResponsiveness,
-                            selectedMeasurement.worstResponsivenessMs
-                        )
-                    )
-                    .symbolSize(42)
-                    .foregroundStyle(.pink)
-                }
-            }
-            .chartLegend(.hidden)
-            .chartForegroundStyleScale([
-                strings.historyLegendLatency: Color.orange,
-                strings.historyLegendResponsiveness: Color.pink
-            ])
-            .chartXScale(domain: chartDomain)
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: axisDesiredCount)) {
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.divider)
-                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.textTertiary)
-                    AxisValueLabel(format: selectedRange.axisFormatStyle(locale: localization.locale))
-                }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) {
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.divider)
-                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
-                        .foregroundStyle(SpeedChrome.textTertiary)
-                    AxisValueLabel()
-                }
-            }
-            .chartOverlay { proxy in
-                GeometryReader { geometry in
-                    selectionOverlay(
-                        proxy: proxy,
-                        geometry: geometry,
-                        chart: .latency,
-                        issues: filteredIssues
-                    )
-                }
-            }
-            .frame(height: 154)
-            .padding(.top, issueMarkerLaneHeight)
-        }
+            ],
+            measurements: visibleHistory.latencyChartMeasurements,
+            primaryTitle: strings.historyLegendLatency,
+            primaryColor: .orange,
+            primaryValue: \.idleLatencyMs,
+            secondaryTitle: strings.historyLegendResponsiveness,
+            secondaryColor: .pink,
+            secondaryValue: \.worstResponsivenessMs,
+            valueUnit: .milliseconds
+        )
     }
 
     private var recentEntriesSection: some View {
@@ -339,14 +141,14 @@ struct HistorySectionView: View {
                 .font(.system(size: 12.5, weight: .semibold))
                 .foregroundStyle(SpeedChrome.textPrimary)
 
-            ForEach(Array(recentEntries.enumerated()), id: \.element.id) { index, entry in
+            ForEach(Array(visibleHistory.recentEntries.enumerated()), id: \.element.id) { index, entry in
                 if let result = entry.result {
                     recentMeasurementRow(result)
                 } else if let issue = entry.issue {
                     recentIssueRow(issue)
                 }
 
-                if index < recentEntries.count - 1 {
+                if index < visibleHistory.recentEntries.count - 1 {
                     SubtleDivider()
                 }
             }
@@ -428,11 +230,88 @@ struct HistorySectionView: View {
         )
     }
 
-    private func chartSection<Content: View>(
-        title: String,
-        legends: [HistoryLegendItem],
-        @ViewBuilder content: () -> Content
-    ) -> some View {
+    private func timestampLabel(for date: Date) -> String {
+        let style = Date.FormatStyle(
+            date: selectedRange == .hour || selectedRange == .day ? .omitted : .abbreviated,
+            time: .shortened
+        )
+        return date.formatted(style.locale(localization.locale))
+    }
+
+    private func refreshVisibleHistory() {
+        visibleHistory = HistorySectionSnapshot(
+            history: viewModel.history,
+            range: selectedRange,
+            referenceDate: .now
+        )
+    }
+
+    private func issueRecentSummary(_ issue: NetworkIssueRecord) -> String {
+        var segments = [String]()
+
+        if issue.occurrenceCount > 1 {
+            segments.append("\(issue.occurrenceCount)x")
+        }
+
+        if let pathStatus = issue.pathStatusTitle(using: strings) {
+            segments.append(pathStatus)
+        }
+
+        if let diagnosticCode = issue.diagnosticCode {
+            segments.append(diagnosticCode)
+        }
+
+        if !segments.isEmpty, segments.count > 1 {
+            return segments.joined(separator: " • ")
+        }
+
+        if let firstSegment = segments.first {
+            return firstSegment
+        }
+
+        if let interfaces = issue.interfaceSummary {
+            return interfaces
+        }
+
+        if let message = issue.message, !message.isEmpty {
+            return message
+        }
+
+        return strings.networkIssueTitle(issue.kind)
+    }
+
+    private func issueTimestampLabel(_ issue: NetworkIssueRecord) -> String {
+        if issue.coversMultipleEvents {
+            return "\(timestampLabel(for: issue.startedAt)) - \(timestampLabel(for: issue.lastObservedAt))"
+        }
+
+        return timestampLabel(for: issue.measuredAt)
+    }
+}
+
+private struct HistoryMetricChartSectionView: View {
+    let snapshot: HistorySectionSnapshot
+    let selectedRange: HistoryTimeRange
+    let localization: SpeedLocalization
+    let title: String
+    let legends: [HistoryLegendItem]
+    let measurements: [SpeedTestResult]
+    let primaryTitle: String
+    let primaryColor: Color
+    let primaryValue: KeyPath<SpeedTestResult, Double>
+    let secondaryTitle: String
+    let secondaryColor: Color
+    let secondaryValue: KeyPath<SpeedTestResult, Double>
+    let valueUnit: HistoryMetricValueUnit
+
+    @State
+    private var selectedEntry: SpeedTestHistoryEntry?
+
+    private var strings: SpeedStrings {
+        localization.strings
+    }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 16) {
                 Text(title)
@@ -462,7 +341,109 @@ struct HistorySectionView: View {
                 }
             }
 
-            content()
+            Chart {
+                if measurements.isEmpty {
+                    RuleMark(y: .value("Placeholder", 0))
+                        .foregroundStyle(.clear)
+                }
+
+                ForEach(measurements) { result in
+                    LineMark(
+                        x: .value("Time", result.measuredAt),
+                        y: .value(primaryTitle, result[keyPath: primaryValue]),
+                        series: .value("Series", primaryTitle)
+                    )
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(primaryColor)
+
+                    if snapshot.showsMeasurementPoints {
+                        PointMark(
+                            x: .value("Time", result.measuredAt),
+                            y: .value(primaryTitle, result[keyPath: primaryValue])
+                        )
+                        .symbolSize(14)
+                        .foregroundStyle(primaryColor.opacity(0.35))
+                    }
+
+                    LineMark(
+                        x: .value("Time", result.measuredAt),
+                        y: .value(secondaryTitle, result[keyPath: secondaryValue]),
+                        series: .value("Series", secondaryTitle)
+                    )
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(secondaryColor)
+
+                    if snapshot.showsMeasurementPoints {
+                        PointMark(
+                            x: .value("Time", result.measuredAt),
+                            y: .value(secondaryTitle, result[keyPath: secondaryValue])
+                        )
+                        .symbolSize(14)
+                        .foregroundStyle(secondaryColor.opacity(0.35))
+                    }
+                }
+
+                if let selectedEntry {
+                    RuleMark(x: .value("Selected time", selectedEntry.measuredAt))
+                        .foregroundStyle(SpeedChrome.textTertiary.opacity(0.55))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                }
+
+                if let selectedMeasurement = selectedEntry?.result {
+                    PointMark(
+                        x: .value("Time", selectedMeasurement.measuredAt),
+                        y: .value(primaryTitle, selectedMeasurement[keyPath: primaryValue])
+                    )
+                    .symbolSize(42)
+                    .foregroundStyle(primaryColor)
+
+                    PointMark(
+                        x: .value("Time", selectedMeasurement.measuredAt),
+                        y: .value(secondaryTitle, selectedMeasurement[keyPath: secondaryValue])
+                    )
+                    .symbolSize(42)
+                    .foregroundStyle(secondaryColor)
+                }
+            }
+            .chartLegend(.hidden)
+            .chartForegroundStyleScale([
+                primaryTitle: primaryColor,
+                secondaryTitle: secondaryColor
+            ])
+            .chartXScale(domain: snapshot.chartDomain)
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: axisDesiredCount)) {
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.divider)
+                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.textTertiary)
+                    AxisValueLabel(format: selectedRange.axisFormatStyle(locale: localization.locale))
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) {
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.divider)
+                    AxisTick(stroke: StrokeStyle(lineWidth: 0.7))
+                        .foregroundStyle(SpeedChrome.textTertiary)
+                    AxisValueLabel()
+                }
+            }
+            .chartOverlay { proxy in
+                GeometryReader { geometry in
+                    selectionOverlay(proxy: proxy, geometry: geometry)
+                }
+            }
+            .frame(height: 154)
+            .padding(.top, issueMarkerLaneHeight)
+        }
+        .onChange(of: snapshot.entries) { _, entries in
+            if let selectedEntry,
+               !entries.contains(where: { $0.id == selectedEntry.id }) {
+                clearSelection()
+            }
         }
     }
 
@@ -477,43 +458,164 @@ struct HistorySectionView: View {
         }
     }
 
-    private func timestampLabel(for date: Date) -> String {
-        let style = Date.FormatStyle(
-            date: selectedRange == .hour || selectedRange == .day ? .omitted : .abbreviated,
-            time: .shortened
-        )
-        return date.formatted(style.locale(localization.locale))
+    private func selectionOverlay(proxy: ChartProxy, geometry: GeometryProxy) -> some View {
+        Group {
+            if let plotFrameAnchor = proxy.plotFrame {
+                let plotFrame = geometry[plotFrameAnchor]
+                let hoverFrame = interactionFrame(for: plotFrame)
+
+                ZStack(alignment: .topLeading) {
+                    issueMarkers(proxy: proxy, plotFrame: plotFrame)
+
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                        .frame(width: hoverFrame.width, height: hoverFrame.height)
+                        .position(x: hoverFrame.midX, y: hoverFrame.midY)
+                        .onContinuousHover { phase in
+                            handleHover(
+                                phase,
+                                proxy: proxy,
+                                plotFrame: plotFrame,
+                                hoverFrame: hoverFrame
+                            )
+                        }
+
+                    if let selectedEntry,
+                       let plotX = proxy.position(forX: selectedEntry.measuredAt) {
+                        let pointX = plotFrame.minX + plotX
+
+                        chartTooltip(for: selectedEntry)
+                            .position(
+                                x: preferredTooltipX(for: pointX, in: plotFrame),
+                                y: plotFrame.minY + 28
+                            )
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
-    private func chartTooltip(for entry: SpeedTestHistoryEntry, chart: HistoryChartKind) -> some View {
+    private func issueMarkers(proxy: ChartProxy, plotFrame: CGRect) -> some View {
+        ForEach(snapshot.issues, id: \.measuredAt) { issue in
+            if let plotX = proxy.position(forX: issue.measuredAt) {
+                let isSelectedIssue = selectedEntry?.issue == issue
+
+                NetworkIssueMarkerView(
+                    issue: issue,
+                    isSelected: isSelectedIssue,
+                    size: isSelectedIssue ? 18 : 15
+                )
+                .position(x: plotFrame.minX + plotX, y: issueMarkerY(in: plotFrame))
+                .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func handleHover(
+        _ phase: HoverPhase,
+        proxy: ChartProxy,
+        plotFrame: CGRect,
+        hoverFrame: CGRect
+    ) {
+        switch phase {
+        case let .active(location):
+            if let hoveredIssue = hoveredIssue(
+                at: location,
+                proxy: proxy,
+                plotFrame: plotFrame
+            ) {
+                selectEntry(SpeedTestHistoryEntry(issue: hoveredIssue))
+                return
+            }
+
+            guard hoverFrame.contains(location) else {
+                clearSelection()
+                return
+            }
+
+            let plotX = min(max(location.x - plotFrame.origin.x, 0), plotFrame.width)
+            guard let hoveredDate: Date = proxy.value(atX: plotX) else {
+                clearSelection()
+                return
+            }
+
+            selectEntry(snapshot.nearestEntry(to: hoveredDate))
+        case .ended:
+            clearSelection()
+        }
+    }
+
+    private func selectEntry(_ entry: SpeedTestHistoryEntry?) {
+        guard selectedEntry?.id != entry?.id else {
+            return
+        }
+
+        selectedEntry = entry
+    }
+
+    private func clearSelection() {
+        guard selectedEntry != nil else {
+            return
+        }
+
+        selectedEntry = nil
+    }
+
+    private func hoveredIssue(
+        at location: CGPoint,
+        proxy: ChartProxy,
+        plotFrame: CGRect
+    ) -> NetworkIssueRecord? {
+        snapshot.issues.first { issue in
+            guard let markerX = issueMarkerX(for: issue, proxy: proxy, plotFrame: plotFrame) else {
+                return false
+            }
+
+            let markerCenter = CGPoint(x: markerX, y: issueMarkerY(in: plotFrame))
+            return hypot(location.x - markerCenter.x, location.y - markerCenter.y) <= issueHoverRadius
+        }
+    }
+
+    private func issueMarkerX(
+        for issue: NetworkIssueRecord,
+        proxy: ChartProxy,
+        plotFrame: CGRect
+    ) -> CGFloat? {
+        guard let plotX = proxy.position(forX: issue.measuredAt) else {
+            return nil
+        }
+
+        return plotFrame.minX + plotX
+    }
+
+    private func interactionFrame(for plotFrame: CGRect) -> CGRect {
+        let topEdge = min(issueMarkerY(in: plotFrame) - issueHoverRadius, plotFrame.minY)
+        return CGRect(
+            x: plotFrame.minX - hoverHorizontalInset,
+            y: topEdge,
+            width: plotFrame.width + hoverHorizontalInset * 2,
+            height: plotFrame.maxY - topEdge + hoverVerticalInset
+        )
+    }
+
+    @ViewBuilder
+    private func chartTooltip(for entry: SpeedTestHistoryEntry) -> some View {
         if let issue = entry.issue {
             issueTooltip(issue)
         } else if let result = entry.result {
-            switch chart {
-            case .throughput:
-                measurementTooltip(
-                    timestamp: tooltipTimestamp(for: result.measuredAt),
-                    primaryColor: SpeedChrome.brand,
-                    primaryTitle: strings.historyLegendDownload,
-                    primaryValue: exactSpeed(result.downloadMbps),
-                    secondaryColor: .green,
-                    secondaryTitle: strings.historyLegendUpload,
-                    secondaryValue: exactSpeed(result.uploadMbps),
-                    result: result
-                )
-            case .latency:
-                measurementTooltip(
-                    timestamp: tooltipTimestamp(for: result.measuredAt),
-                    primaryColor: .orange,
-                    primaryTitle: strings.historyLegendLatency,
-                    primaryValue: exactMilliseconds(result.idleLatencyMs),
-                    secondaryColor: .pink,
-                    secondaryTitle: strings.historyLegendResponsiveness,
-                    secondaryValue: exactMilliseconds(result.worstResponsivenessMs),
-                    result: result
-                )
-            }
+            measurementTooltip(
+                timestamp: tooltipTimestamp(for: result.measuredAt),
+                primaryColor: primaryColor,
+                primaryTitle: primaryTitle,
+                primaryValue: exactValue(result[keyPath: primaryValue]),
+                secondaryColor: secondaryColor,
+                secondaryTitle: secondaryTitle,
+                secondaryValue: exactValue(result[keyPath: secondaryValue]),
+                result: result
+            )
         }
     }
 
@@ -660,166 +762,6 @@ struct HistorySectionView: View {
         }
     }
 
-    private func selectionOverlay(
-        proxy: ChartProxy,
-        geometry: GeometryProxy,
-        chart: HistoryChartKind,
-        issues: [NetworkIssueRecord]
-    ) -> some View {
-        Group {
-            if let plotFrameAnchor = proxy.plotFrame {
-                let plotFrame = geometry[plotFrameAnchor]
-                let hoverFrame = interactionFrame(for: plotFrame)
-
-                ZStack(alignment: .topLeading) {
-                    issueMarkers(proxy: proxy, plotFrame: plotFrame, chart: chart, issues: issues)
-
-                    Rectangle()
-                        .fill(.clear)
-                        .contentShape(Rectangle())
-                        .frame(width: hoverFrame.width, height: hoverFrame.height)
-                        .position(x: hoverFrame.midX, y: hoverFrame.midY)
-                        .onContinuousHover { phase in
-                            handleHover(
-                                phase,
-                                proxy: proxy,
-                                plotFrame: plotFrame,
-                                hoverFrame: hoverFrame,
-                                chart: chart,
-                                issues: issues
-                            )
-                        }
-
-                    if activeChart == chart,
-                       let selectedEntry,
-                       let plotX = proxy.position(forX: selectedEntry.measuredAt) {
-                        let pointX = plotFrame.minX + plotX
-
-                        chartTooltip(for: selectedEntry, chart: chart)
-                            .position(
-                                x: preferredTooltipX(for: pointX, in: plotFrame),
-                                y: plotFrame.minY + 28
-                            )
-                            .allowsHitTesting(false)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func issueMarkers(
-        proxy: ChartProxy,
-        plotFrame: CGRect,
-        chart: HistoryChartKind,
-        issues: [NetworkIssueRecord]
-    ) -> some View {
-        ForEach(issues, id: \.measuredAt) { issue in
-            if let plotX = proxy.position(forX: issue.measuredAt) {
-                NetworkIssueMarkerView(
-                    issue: issue,
-                    isSelected: activeChart == chart && selectedEntry?.issue == issue,
-                    size: activeChart == chart && selectedEntry?.issue == issue ? 18 : 15
-                )
-                .position(x: plotFrame.minX + plotX, y: issueMarkerY(in: plotFrame))
-                .allowsHitTesting(false)
-            }
-        }
-    }
-
-    private func handleHover(
-        _ phase: HoverPhase,
-        proxy: ChartProxy,
-        plotFrame: CGRect,
-        hoverFrame: CGRect,
-        chart: HistoryChartKind,
-        issues: [NetworkIssueRecord]
-    ) {
-        switch phase {
-        case let .active(location):
-            if let hoveredIssue = hoveredIssue(
-                at: location,
-                proxy: proxy,
-                plotFrame: plotFrame,
-                issues: issues
-            ) {
-                selectedEntry = SpeedTestHistoryEntry(issue: hoveredIssue)
-                activeChart = chart
-                return
-            }
-
-            guard hoverFrame.contains(location) else {
-                if activeChart == chart {
-                    clearSelection()
-                }
-                return
-            }
-
-            let plotX = min(max(location.x - plotFrame.origin.x, 0), plotFrame.width)
-            guard let hoveredDate: Date = proxy.value(atX: plotX) else {
-                clearSelection()
-                return
-            }
-
-            selectedEntry = nearestEntry(to: hoveredDate)
-            activeChart = chart
-        case .ended:
-            if activeChart == chart {
-                clearSelection()
-            }
-        }
-    }
-
-    private func hoveredIssue(
-        at location: CGPoint,
-        proxy: ChartProxy,
-        plotFrame: CGRect,
-        issues: [NetworkIssueRecord]
-    ) -> NetworkIssueRecord? {
-        issues.first { issue in
-            guard let markerX = issueMarkerX(for: issue, proxy: proxy, plotFrame: plotFrame) else {
-                return false
-            }
-
-            let markerCenter = CGPoint(x: markerX, y: issueMarkerY(in: plotFrame))
-            return hypot(location.x - markerCenter.x, location.y - markerCenter.y) <= issueHoverRadius
-        }
-    }
-
-    private func issueMarkerX(
-        for issue: NetworkIssueRecord,
-        proxy: ChartProxy,
-        plotFrame: CGRect
-    ) -> CGFloat? {
-        guard let plotX = proxy.position(forX: issue.measuredAt) else {
-            return nil
-        }
-
-        return plotFrame.minX + plotX
-    }
-
-    private func interactionFrame(for plotFrame: CGRect) -> CGRect {
-        let topEdge = min(issueMarkerY(in: plotFrame) - issueHoverRadius, plotFrame.minY)
-        return CGRect(
-            x: plotFrame.minX - hoverHorizontalInset,
-            y: topEdge,
-            width: plotFrame.width + hoverHorizontalInset * 2,
-            height: plotFrame.maxY - topEdge + hoverVerticalInset
-        )
-    }
-
-    private func nearestEntry(to hoveredDate: Date) -> SpeedTestHistoryEntry? {
-        filteredHistory.min { lhs, rhs in
-            abs(lhs.measuredAt.timeIntervalSince(hoveredDate))
-                < abs(rhs.measuredAt.timeIntervalSince(hoveredDate))
-        }
-    }
-
-    private func clearSelection() {
-        selectedEntry = nil
-        activeChart = nil
-    }
-
     private func preferredTooltipX(for pointX: CGFloat, in plotFrame: CGRect) -> CGFloat {
         let halfWidth = tooltipWidth / 2
         let clearance: CGFloat = 24
@@ -840,58 +782,21 @@ struct HistorySectionView: View {
         )
     }
 
-    private func exactSpeed(_ value: Double) -> String {
-        "\(value.formatted(.number.locale(localization.locale).precision(.fractionLength(1)))) Mbps"
-    }
+    private func exactValue(_ value: Double) -> String {
+        let formattedValue = value.formatted(
+            .number.locale(localization.locale).precision(.fractionLength(1))
+        )
 
-    private func exactMilliseconds(_ value: Double) -> String {
-        "\(value.formatted(.number.locale(localization.locale).precision(.fractionLength(1)))) ms"
+        switch valueUnit {
+        case .megabitsPerSecond:
+            return "\(formattedValue) Mbps"
+        case .milliseconds:
+            return "\(formattedValue) ms"
+        }
     }
 
     private func normalizedServerName(_ serverName: String) -> String {
         serverName.replacingOccurrences(of: ".aaplimg.com", with: "")
-    }
-
-    private func issueRecentSummary(_ issue: NetworkIssueRecord) -> String {
-        var segments = [String]()
-
-        if issue.occurrenceCount > 1 {
-            segments.append("\(issue.occurrenceCount)x")
-        }
-
-        if let pathStatus = issue.pathStatusTitle(using: strings) {
-            segments.append(pathStatus)
-        }
-
-        if let diagnosticCode = issue.diagnosticCode {
-            segments.append(diagnosticCode)
-        }
-
-        if !segments.isEmpty, segments.count > 1 {
-            return segments.joined(separator: " • ")
-        }
-
-        if let firstSegment = segments.first {
-            return firstSegment
-        }
-
-        if let interfaces = issue.interfaceSummary {
-            return interfaces
-        }
-
-        if let message = issue.message, !message.isEmpty {
-            return message
-        }
-
-        return strings.networkIssueTitle(issue.kind)
-    }
-
-    private func issueTimestampLabel(_ issue: NetworkIssueRecord) -> String {
-        if issue.coversMultipleEvents {
-            return "\(timestampLabel(for: issue.startedAt)) - \(timestampLabel(for: issue.lastObservedAt))"
-        }
-
-        return timestampLabel(for: issue.measuredAt)
     }
 
     private func issueTooltipTimestamp(_ issue: NetworkIssueRecord) -> String {
@@ -944,6 +849,11 @@ struct HistorySectionView: View {
     }
 }
 
+private enum HistoryMetricValueUnit {
+    case megabitsPerSecond
+    case milliseconds
+}
+
 private struct HistoryLegendItem: Identifiable {
     let title: String
     let color: Color
@@ -952,9 +862,4 @@ private struct HistoryLegendItem: Identifiable {
     var id: String {
         title
     }
-}
-
-private enum HistoryChartKind {
-    case throughput
-    case latency
 }
